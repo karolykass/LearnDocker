@@ -1,0 +1,15 @@
+$ docker ps
+CONTAINER ID        IMAGE                  COMMAND                  CREATED             STATUS              PORTS               NAMES
+06f0a46328b9        seqvence/static-site   "/bin/sh -c 'cd /u..."   2 minutes ago       Up 2 minutes        80/tcp, 443/tcp     kind_roentgen
+$ docker stop 06f0a46328b9
+06f0a46328b9
+$ docker rm 06f0a46328b9
+06f0a46328b9
+$ docker run --name static-site -e AUTHOR="Karoly Kass" -d -P seqvence/static-site
+8e0da9e437d3f663d857827094c060406a4956fbb5dd4108b91eb8de8358677e
+$ docker ps
+CONTAINER ID        IMAGE                  COMMAND                  CREATED             STATUS              PORTS                                           NAMES
+8e0da9e437d3        seqvence/static-site   "/bin/sh -c 'cd /u..."   13 seconds ago      Up 17 seconds       0.0.0.0:32772->80/tcp, 0.0.0.0:32771->443/tcp   static-site
+$ docker port static-site
+443/tcp -> 0.0.0.0:32771
+80/tcp -> 0.0.0.0:32772

@@ -1,0 +1,27 @@
+$ ./get_docker_versions.sh 
+
+Docker version 17.03.0-ce, build 60ccb22
+
+Client:
+ Version:      17.03.0-ce
+ API version:  1.26
+ Go version:   go1.7.5
+ Git commit:   60ccb22
+ Built:        Thu Feb 23 10:40:59 2017
+ OS/Arch:      darwin/amd64
+
+Server:
+ Version:      17.03.0-ce
+ API version:  1.26 (minimum version 1.12)
+ Go version:   go1.7.5
+ Git commit:   3a232c8
+ Built:        Tue Feb 28 07:52:04 2017
+ OS/Arch:      linux/amd64
+ Experimental: false
+
+docker-compose version 1.11.2, build dfed245
+
+docker-machine version 0.10.0, build 76ed2a6
+
+Kernel Version: 4.9.12-moby
+Operating System: Alpine Linux v3.5

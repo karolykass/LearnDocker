@@ -1,0 +1,5 @@
+http://localhost:8888/
+
+Hello Karoly Kass!
+This is being served from a docker
+container running Nginx.

@@ -1,0 +1,3 @@
+$ docker node ls
+ID                           HOSTNAME  STATUS  AVAILABILITY  MANAGER STATUS
+nykp0ht9qdju8203viuymxcd7 *  moby      Ready   Active        Leader

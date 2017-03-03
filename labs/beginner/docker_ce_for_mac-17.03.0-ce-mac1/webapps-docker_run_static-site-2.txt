@@ -1,0 +1,5 @@
+$ docker run --name static-site-2 -e AUTHOR="Karoly Kass" -d -p 8888:80 seqvence/static-site
+9c712e13a4357a1786f2d7e36bbb8428f8600ad3b77c923060661fde77f00920
+$ docker ps | grep "CONTAINER\|static-site-2"
+CONTAINER ID        IMAGE                  COMMAND                  CREATED             STATUS              PORTS                                           NAMES
+9c712e13a435        seqvence/static-site   "/bin/sh -c 'cd /u..."   2 minutes ago       Up 2 minutes        443/tcp, 0.0.0.0:8888->80/tcp                   static-site-2

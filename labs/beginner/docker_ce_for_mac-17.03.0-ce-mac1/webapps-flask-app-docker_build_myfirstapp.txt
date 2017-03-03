@@ -1,0 +1,163 @@
+$ cat app.py 
+from flask import Flask, render_template
+import random
+
+app = Flask(__name__)
+
+# list of cat images
+images = [
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr05/15/9/anigif_enhanced-buzz-26388-1381844103-11.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr01/15/9/anigif_enhanced-buzz-31540-1381844535-8.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr05/15/9/anigif_enhanced-buzz-26390-1381844163-18.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr06/15/10/anigif_enhanced-buzz-1376-1381846217-0.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr03/15/9/anigif_enhanced-buzz-3391-1381844336-26.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr06/15/10/anigif_enhanced-buzz-29111-1381845968-0.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr03/15/9/anigif_enhanced-buzz-3409-1381844582-13.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr02/15/9/anigif_enhanced-buzz-19667-1381844937-10.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr05/15/9/anigif_enhanced-buzz-26358-1381845043-13.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr06/15/9/anigif_enhanced-buzz-18774-1381844645-6.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr06/15/9/anigif_enhanced-buzz-25158-1381844793-0.gif",
+    "http://ak-hdl.buzzfed.com/static/2013-10/enhanced/webdr03/15/10/anigif_enhanced-buzz-11980-1381846269-1.gif"
+]
+
+@app.route('/')
+def index():
+    url = random.choice(images)
+    return render_template('index.html', url=url)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0")
+$ cat requirements.txt 
+Flask==0.10.1
+$ cat templates/index.html 
+<html>
+  <head>
+    <style type="text/css">
+      body {
+        background: black;
+        color: white;
+      }
+      div.container {
+        max-width: 500px;
+        margin: 100px auto;
+        border: 20px solid white;
+        padding: 10px;
+        text-align: center;
+      }
+      h4 {
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h4>Cat Gif of the day</h4>
+      <img src="{{url}}" />
+      <p><small>Courtesy: <a href="http://www.buzzfeed.com/copyranter/the-best-cat-gif-post-in-the-history-of-cat-gifs">Buzzfeed</a></small></p>
+    </div>
+  </body>
+</html>
+$ cat Dockerfile 
+# our base image
+FROM alpine:3.5
+
+# Install python and pip
+RUN apk add --update py2-pip
+
+# upgrade pip
+RUN pip install --upgrade pip
+
+# install Python modules needed by the Python app
+COPY requirements.txt /usr/src/app/
+RUN pip install --no-cache-dir -r /usr/src/app/requirements.txt
+
+# copy files required for the app to run
+COPY app.py /usr/src/app/
+COPY templates/index.html /usr/src/app/templates/
+
+# tell the port number the container should expose
+EXPOSE 5000
+
+# run the application
+CMD ["python", "/usr/src/app/app.py"]
+$ docker build -t karolykass/myfirstapp .
+Sending build context to Docker daemon 8.192 kB
+Step 1/9 : FROM alpine:3.5
+3.5: Pulling from library/alpine
+Digest: sha256:dfbd4a3a8ebca874ebd2474f044a0b33600d4523d03b0df76e5c5986cb02d7e8
+Status: Downloaded newer image for alpine:3.5
+ ---> 88e169ea8f46
+Step 2/9 : RUN apk add --update py2-pip
+ ---> Running in 392d18ce7fd0
+fetch http://dl-cdn.alpinelinux.org/alpine/v3.5/main/x86_64/APKINDEX.tar.gz
+fetch http://dl-cdn.alpinelinux.org/alpine/v3.5/community/x86_64/APKINDEX.tar.gz
+(1/12) Installing libbz2 (1.0.6-r5)
+(2/12) Installing expat (2.2.0-r0)
+(3/12) Installing libffi (3.2.1-r2)
+(4/12) Installing gdbm (1.12-r0)
+(5/12) Installing ncurses-terminfo-base (6.0-r7)
+(6/12) Installing ncurses-terminfo (6.0-r7)
+(7/12) Installing ncurses-libs (6.0-r7)
+(8/12) Installing readline (6.3.008-r4)
+(9/12) Installing sqlite-libs (3.15.2-r0)
+(10/12) Installing python2 (2.7.13-r0)
+(11/12) Installing py-setuptools (29.0.1-r0)
+(12/12) Installing py2-pip (9.0.0-r1)
+Executing busybox-1.25.1-r0.trigger
+OK: 61 MiB in 23 packages
+ ---> c31dce971b47
+Removing intermediate container 392d18ce7fd0
+Step 3/9 : RUN pip install --upgrade pip
+ ---> Running in 163d9215fc71
+Collecting pip
+  Downloading pip-9.0.1-py2.py3-none-any.whl (1.3MB)
+Installing collected packages: pip
+  Found existing installation: pip 9.0.0
+    Uninstalling pip-9.0.0:
+      Successfully uninstalled pip-9.0.0
+Successfully installed pip-9.0.1
+ ---> 3ac3cd921364
+Removing intermediate container 163d9215fc71
+Step 4/9 : COPY requirements.txt /usr/src/app/
+ ---> 4cdd7ae045f7
+Removing intermediate container adfb6a0114dd
+Step 5/9 : RUN pip install --no-cache-dir -r /usr/src/app/requirements.txt
+ ---> Running in b14249899eaa
+Collecting Flask==0.10.1 (from -r /usr/src/app/requirements.txt (line 1))
+  Downloading Flask-0.10.1.tar.gz (544kB)
+Collecting Werkzeug>=0.7 (from Flask==0.10.1->-r /usr/src/app/requirements.txt (line 1))
+  Downloading Werkzeug-0.11.15-py2.py3-none-any.whl (307kB)
+Collecting Jinja2>=2.4 (from Flask==0.10.1->-r /usr/src/app/requirements.txt (line 1))
+  Downloading Jinja2-2.9.5-py2.py3-none-any.whl (340kB)
+Collecting itsdangerous>=0.21 (from Flask==0.10.1->-r /usr/src/app/requirements.txt (line 1))
+  Downloading itsdangerous-0.24.tar.gz (46kB)
+Collecting MarkupSafe>=0.23 (from Jinja2>=2.4->Flask==0.10.1->-r /usr/src/app/requirements.txt (line 1))
+  Downloading MarkupSafe-0.23.tar.gz
+Installing collected packages: Werkzeug, MarkupSafe, Jinja2, itsdangerous, Flask
+  Running setup.py install for MarkupSafe: started
+    Running setup.py install for MarkupSafe: finished with status 'done'
+  Running setup.py install for itsdangerous: started
+    Running setup.py install for itsdangerous: finished with status 'done'
+  Running setup.py install for Flask: started
+    Running setup.py install for Flask: finished with status 'done'
+Successfully installed Flask-0.10.1 Jinja2-2.9.5 MarkupSafe-0.23 Werkzeug-0.11.15 itsdangerous-0.24
+ ---> 800276b782e9
+Removing intermediate container b14249899eaa
+Step 6/9 : COPY app.py /usr/src/app/
+ ---> 58c1e47734d0
+Removing intermediate container de2beac204f6
+Step 7/9 : COPY templates/index.html /usr/src/app/templates/
+ ---> 5c144d586967
+Removing intermediate container 458851cec856
+Step 8/9 : EXPOSE 5000
+ ---> Running in afd61f9122f6
+ ---> 1a5924eb692f
+Removing intermediate container afd61f9122f6
+Step 9/9 : CMD python /usr/src/app/app.py
+ ---> Running in 4bfc46d774ab
+ ---> 3515c5e5f69d
+Removing intermediate container 4bfc46d774ab
+Successfully built 3515c5e5f69d
+$ docker images | grep "REPOSITORY\|myfirstapp"
+REPOSITORY              TAG                 IMAGE ID            CREATED             SIZE
+karolykass/myfirstapp   latest              3515c5e5f69d        3 minutes ago       65.6 MB

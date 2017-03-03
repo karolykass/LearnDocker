@@ -1,0 +1,2 @@
+$ docker run -p 8888:5000 --name myfirstapp karolykass/myfirstapp
+ * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)

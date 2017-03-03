@@ -1,0 +1,4 @@
+$ docker stop myfirstapp
+myfirstapp
+$ docker rm myfirstapp
+myfirstapp

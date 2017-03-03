@@ -1,0 +1,8 @@
+$ docker stack services vote
+ID            NAME             MODE        REPLICAS  IMAGE
+3wstlhiry59t  vote_worker      replicated  0/1       dockersamples/examplevotingapp_worker:latest
+3wtkocsj1w7a  vote_result      replicated  0/1       dockersamples/examplevotingapp_result:before
+i1ik37r6kjpq  vote_redis       replicated  2/2       redis:alpine
+jqlp9htvjlpr  vote_db          replicated  1/1       postgres:9.4
+tf1fww8g5uz6  vote_vote        replicated  2/2       dockersamples/examplevotingapp_vote:before
+yg8nl9ljta0r  vote_visualizer  replicated  1/1       dockersamples/visualizer:stable

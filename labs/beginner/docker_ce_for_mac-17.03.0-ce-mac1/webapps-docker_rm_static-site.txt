@@ -1,0 +1,13 @@
+$ docker ps
+CONTAINER ID        IMAGE                  COMMAND                  CREATED             STATUS              PORTS                                           NAMES
+9c712e13a435        seqvence/static-site   "/bin/sh -c 'cd /u..."   14 minutes ago      Up 14 minutes       443/tcp, 0.0.0.0:8888->80/tcp                   static-site-2
+8e0da9e437d3        seqvence/static-site   "/bin/sh -c 'cd /u..."   22 minutes ago      Up 22 minutes       0.0.0.0:32772->80/tcp, 0.0.0.0:32771->443/tcp   static-site
+$ docker stop static-site
+static-site
+$ docker rm static-site
+static-site
+$ docker rm -f static-site static-site-2
+static-site-2
+Error response from daemon: No such container: static-site
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES

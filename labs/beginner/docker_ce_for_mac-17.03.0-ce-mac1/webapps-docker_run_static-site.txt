@@ -1,0 +1,19 @@
+$ cat Dockerfile 
+FROM nginx
+ENV AUTHOR=Docker
+
+WORKDIR /usr/share/nginx/html
+COPY Hello_docker.html /usr/share/nginx/html
+
+CMD cd /usr/share/nginx/html && sed -e s/Docker/"$AUTHOR"/ Hello_docker.html > index.html ; nginx -g 'daemon off;'
+$ docker run -d seqvence/static-site
+Unable to find image 'seqvence/static-site:latest' locally
+latest: Pulling from seqvence/static-site
+fdd5d7827f33: Pull complete 
+a3ed95caeb02: Pull complete 
+716f7a5f3082: Pull complete 
+7b10f03a0309: Pull complete 
+aff3ab7e9c39: Pull complete 
+Digest: sha256:41b286105f913fb7a5fbdce28d48bc80f1c77e3c4ce1b8280f28129ae0e94e9e
+Status: Downloaded newer image for seqvence/static-site:latest
+06f0a46328b98564ae14b9e5ef38956a3c6deac824aaca146660e2c0db7b1c76

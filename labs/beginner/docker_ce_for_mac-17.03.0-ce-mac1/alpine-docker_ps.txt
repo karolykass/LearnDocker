@@ -1,0 +1,9 @@
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+$ docker ps -a
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                      PORTS               NAMES
+4adfe8260c52        alpine              "/bin/sh"                2 minutes ago       Exited (0) 2 minutes ago                        frosty_brahmagupta
+8e8cb9ab6dfa        alpine              "/bin/sh"                3 minutes ago       Exited (0) 3 minutes ago                        jolly_thompson
+5b9b8721b7b5        alpine              "echo 'hello from ..."   3 minutes ago       Exited (0) 3 minutes ago                        laughing_brahmagupta
+59ddae298888        alpine              "ls -l"                  3 minutes ago       Exited (0) 3 minutes ago                        musing_dubinsky
+551004dc4add        hello-world         "/hello"                 12 minutes ago      Exited (0) 12 minutes ago                       quirky_allen

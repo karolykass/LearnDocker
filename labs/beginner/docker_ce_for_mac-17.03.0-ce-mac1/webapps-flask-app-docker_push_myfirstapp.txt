@@ -1,0 +1,25 @@
+$ docker push karolykass/myfirstapp
+The push refers to a repository [docker.io/karolykass/myfirstapp]
+806bb15bf73c: Preparing 
+03fea20d7484: Preparing 
+cc1675d93f4c: Preparing 
+d94a1a40a90c: Preparing 
+5ff00aa36cc1: Preparing 
+412bd1f842a4: Waiting 
+60ab55d3379d: Waiting 
+denied: requested access to the resource is denied
+$ docker login
+Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+Username: karolykass
+Password: 
+Login Succeeded
+$ docker push karolykass/myfirstapp
+The push refers to a repository [docker.io/karolykass/myfirstapp]
+806bb15bf73c: Pushed 
+03fea20d7484: Pushed 
+cc1675d93f4c: Pushed 
+d94a1a40a90c: Pushed 
+5ff00aa36cc1: Pushed 
+412bd1f842a4: Pushed 
+60ab55d3379d: Pushed 
+latest: digest: sha256:07f7dc189d893995d6648f35362bbaf7c9e25ce862e55a3f6fe765e6ee63b24a size: 1783

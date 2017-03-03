@@ -1,0 +1,51 @@
+$ docker run alpine ls -l
+total 52
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 bin
+drwxr-xr-x    5 root     root           340 Mar  3 18:05 dev
+drwxr-xr-x    1 root     root          4096 Mar  3 18:05 etc
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 home
+drwxr-xr-x    5 root     root          4096 Dec 26 21:32 lib
+drwxr-xr-x    5 root     root          4096 Dec 26 21:32 media
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 mnt
+dr-xr-xr-x  114 root     root             0 Mar  3 18:05 proc
+drwx------    2 root     root          4096 Dec 26 21:32 root
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 run
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 sbin
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 srv
+dr-xr-xr-x   13 root     root             0 Mar  3 18:05 sys
+drwxrwxrwt    2 root     root          4096 Dec 26 21:32 tmp
+drwxr-xr-x    7 root     root          4096 Dec 26 21:32 usr
+drwxr-xr-x   12 root     root          4096 Dec 26 21:32 var
+$ docker run alpine echo "hello from alpine"
+hello from alpine
+$ docker run alpine /bin/sh
+$ docker run -it alpine /bin/sh
+/ # ls -l
+total 52
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 bin
+drwxr-xr-x    5 root     root           360 Mar  3 18:06 dev
+drwxr-xr-x    1 root     root          4096 Mar  3 18:06 etc
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 home
+drwxr-xr-x    5 root     root          4096 Dec 26 21:32 lib
+drwxr-xr-x    5 root     root          4096 Dec 26 21:32 media
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 mnt
+dr-xr-xr-x  119 root     root             0 Mar  3 18:06 proc
+drwx------    1 root     root          4096 Mar  3 18:06 root
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 run
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 sbin
+drwxr-xr-x    2 root     root          4096 Dec 26 21:32 srv
+dr-xr-xr-x   13 root     root             0 Mar  3 18:06 sys
+drwxrwxrwt    2 root     root          4096 Dec 26 21:32 tmp
+drwxr-xr-x    7 root     root          4096 Dec 26 21:32 usr
+drwxr-xr-x   12 root     root          4096 Dec 26 21:32 var
+/ # uname -a
+Linux 4adfe8260c52 4.9.12-moby #1 SMP Tue Feb 28 12:11:36 UTC 2017 x86_64 Linux
+/ # exit
+
+$ docker run -it alpine /bin/sh
+/ # ls
+bin    etc    lib    mnt    root   sbin   sys    usr
+dev    home   media  proc   run    srv    tmp    var
+/ # uname -a
+Linux cfaf3f7ce6a2 4.9.12-moby #1 SMP Tue Feb 28 12:11:36 UTC 2017 x86_64 Linux
+/ # exit
