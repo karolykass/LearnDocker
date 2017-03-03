@@ -12,7 +12,7 @@ Playing with Docker's labs ([docker/labs](https://github.com/docker/labs))
 Playing with Dockers's Docker for beginners lab ([docker/labs/beginner](https://github.com/docker/labs/tree/master/beginner))
 
 - Docker Community Edition for Mac 17.03.0-ce-mac1<br />
-  [labs/beginner/docker_ce_for_mac-17.03.0-ce-mac1]((https://github.com/karolykass/LearnDocker/tree/master/labs/beginner/docker_ce_for_mac-17.03.0-ce-mac1))
+  [labs/beginner/docker_ce_for_mac-17.03.0-ce-mac1](https://github.com/karolykass/LearnDocker/tree/master/labs/beginner/docker_ce_for_mac-17.03.0-ce-mac1)
 
 ## example-voting-app
 
