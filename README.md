@@ -1,6 +1,7 @@
 # #LearnDocker :whale:
 
-My personal notes on Learning Docker (as it is).
+My personal notes on Learning Docker<br />
+(As it is.)
 
 ## example-voting-app
 
