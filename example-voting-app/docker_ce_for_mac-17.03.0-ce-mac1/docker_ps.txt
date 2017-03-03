@@ -1,0 +1,7 @@
+$ docker ps
+CONTAINER ID        IMAGE                     COMMAND                  CREATED             STATUS              PORTS                                          NAMES
+cea9907d5c18        examplevotingapp_vote     "python app.py"          2 minutes ago       Up 2 minutes        0.0.0.0:5000->80/tcp                           examplevotingapp_vote_1
+a08f46a14dc1        postgres:9.4              "docker-entrypoint..."   2 minutes ago       Up 2 minutes        5432/tcp                                       db
+2f0fcdcd8bdf        redis:alpine              "docker-entrypoint..."   2 minutes ago       Up 2 minutes        0.0.0.0:32768->6379/tcp                        redis
+0833a48470f8        examplevotingapp_result   "nodemon --debug s..."   2 minutes ago       Up 2 minutes        0.0.0.0:5858->5858/tcp, 0.0.0.0:5001->80/tcp   examplevotingapp_result_1
+c8d677903358        examplevotingapp_worker   "/bin/sh -c 'dotne..."   2 minutes ago       Up 2 minutes                                                       examplevotingapp_worker_1

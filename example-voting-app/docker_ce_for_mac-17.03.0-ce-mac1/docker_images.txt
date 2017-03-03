@@ -1,0 +1,9 @@
+REPOSITORY                TAG                  IMAGE ID            CREATED             SIZE
+examplevotingapp_result   latest               eaef53179187        7 minutes ago       227 MB
+examplevotingapp_worker   latest               bbd7dfcf7816        8 minutes ago       574 MB
+examplevotingapp_vote     latest               8a3b76b9c982        11 minutes ago      84.2 MB
+postgres                  9.4                  d8afe9d2b0b4        2 days ago          263 MB
+redis                     alpine               0d39481626b2        2 weeks ago         20.5 MB
+python                    2.7-alpine           c80455665c57        2 months ago        71.5 MB
+microsoft/dotnet          1.0.0-preview2-sdk   6704971aa9c1        3 months ago        537 MB
+node                      5.11.0-slim          cb888ea932ad        10 months ago       207 MB

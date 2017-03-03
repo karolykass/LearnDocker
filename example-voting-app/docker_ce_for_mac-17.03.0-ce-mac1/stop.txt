@@ -1,0 +1,6 @@
+^CGracefully stopping... (press Ctrl+C again to force)
+Stopping examplevotingapp_vote_1 ... done
+Stopping db ... done
+Stopping redis ... done
+Stopping examplevotingapp_result_1 ... done
+Stopping examplevotingapp_worker_1 ... done

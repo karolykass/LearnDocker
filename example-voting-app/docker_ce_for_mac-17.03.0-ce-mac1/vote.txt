@@ -1,0 +1,10 @@
+vote_1    | 172.19.0.1 - - [03/Mar/2017 16:45:59] "GET / HTTP/1.1" 200 -
+vote_1    | 172.19.0.1 - - [03/Mar/2017 16:45:59] "GET /static/stylesheets/style.css HTTP/1.1" 200 -
+vote_1    | 172.19.0.1 - - [03/Mar/2017 16:45:59] "GET /favicon.ico HTTP/1.1" 404 -
+vote_1    | 172.19.0.1 - - [03/Mar/2017 16:46:14] "POST / HTTP/1.1" 200 -
+worker_1  | Processing vote for 'a' by '122718bec4f2c77'
+worker_1  | Processing vote for 'b' by '122718bec4f2c77'
+vote_1    | 172.19.0.1 - - [03/Mar/2017 16:46:29] "POST / HTTP/1.1" 200 -
+db        | ERROR:  duplicate key value violates unique constraint "votes_id_key"
+db        | DETAIL:  Key (id)=(122718bec4f2c77) already exists.
+db        | STATEMENT:  INSERT INTO votes (id, vote) VALUES ($1, $2)
