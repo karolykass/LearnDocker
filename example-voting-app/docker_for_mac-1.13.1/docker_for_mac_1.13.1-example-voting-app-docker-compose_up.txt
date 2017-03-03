@@ -1,0 +1,3537 @@
+$ cat docker-compose.yml
+version: "3"
+
+services:
+  vote:
+    build: ./vote
+    command: python app.py
+    volumes:
+     - ./vote:/app
+    ports:
+      - "5000:80"
+    networks:
+      - front-tier
+      - back-tier
+
+  result:
+    build: ./result
+    command: nodemon --debug server.js
+    volumes:
+      - ./result:/app
+    ports:
+      - "5001:80"
+      - "5858:5858"
+    networks:
+      - front-tier
+      - back-tier
+
+  worker:
+    build: ./worker
+    networks:
+      - back-tier
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports: ["6379"]
+    networks:
+      - back-tier
+
+  db:
+    image: postgres:9.4
+    container_name: db
+    volumes:
+      - "db-data:/var/lib/postgresql/data"
+    networks:
+      - back-tier
+
+volumes:
+  db-data:
+
+networks:
+  front-tier:
+  back-tier:
+$ docker-compose up
+Creating volume "examplevotingapp_db-data" with default driver
+Building vote
+Step 1/7 : FROM python:2.7-alpine
+2.7-alpine: Pulling from library/python
+b7f33cc0b48e: Already exists
+8eda8bb6fee4: Pull complete
+65cd0d3dd23a: Pull complete
+Digest: sha256:834b44717d3928266472066d82208241a2582ce7b3787f32abbfb0def9fb0324
+Status: Downloaded newer image for python:2.7-alpine
+ ---> c80455665c57
+Step 2/7 : WORKDIR /app
+ ---> b022a209243e
+Removing intermediate container 6c31fe7ace43
+Step 3/7 : ADD requirements.txt /app/requirements.txt
+ ---> 2a04d4aa47e3
+Removing intermediate container 3ca41b669309
+Step 4/7 : RUN pip install -r requirements.txt
+ ---> Running in 3ac9c3352061
+Collecting Flask (from -r requirements.txt (line 1))
+  Downloading Flask-0.12-py2.py3-none-any.whl (82kB)
+Collecting Redis (from -r requirements.txt (line 2))
+  Downloading redis-2.10.5-py2.py3-none-any.whl (60kB)
+Collecting gunicorn (from -r requirements.txt (line 3))
+  Downloading gunicorn-19.6.0-py2.py3-none-any.whl (114kB)
+Collecting itsdangerous>=0.21 (from Flask->-r requirements.txt (line 1))
+  Downloading itsdangerous-0.24.tar.gz (46kB)
+Collecting click>=2.0 (from Flask->-r requirements.txt (line 1))
+  Downloading click-6.7-py2.py3-none-any.whl (71kB)
+Collecting Jinja2>=2.4 (from Flask->-r requirements.txt (line 1))
+  Downloading Jinja2-2.9.5-py2.py3-none-any.whl (340kB)
+Collecting Werkzeug>=0.7 (from Flask->-r requirements.txt (line 1))
+  Downloading Werkzeug-0.11.15-py2.py3-none-any.whl (307kB)
+Collecting MarkupSafe>=0.23 (from Jinja2>=2.4->Flask->-r requirements.txt (line 1))
+  Downloading MarkupSafe-0.23.tar.gz
+Building wheels for collected packages: itsdangerous, MarkupSafe
+  Running setup.py bdist_wheel for itsdangerous: started
+  Running setup.py bdist_wheel for itsdangerous: finished with status 'done'
+  Stored in directory: /root/.cache/pip/wheels/fc/a8/66/24d655233c757e178d45dea2de22a04c6d92766abfb741129a
+  Running setup.py bdist_wheel for MarkupSafe: started
+  Running setup.py bdist_wheel for MarkupSafe: finished with status 'done'
+  Stored in directory: /root/.cache/pip/wheels/a3/fa/dc/0198eed9ad95489b8a4f45d14dd5d2aee3f8984e46862c5748
+Successfully built itsdangerous MarkupSafe
+Installing collected packages: itsdangerous, click, MarkupSafe, Jinja2, Werkzeug, Flask, Redis, gunicorn
+Successfully installed Flask-0.12 Jinja2-2.9.5 MarkupSafe-0.23 Redis-2.10.5 Werkzeug-0.11.15 click-6.7 gunicorn-19.6.0 itsdangerous-0.24
+ ---> 53cbd64dd918
+Removing intermediate container 3ac9c3352061
+Step 5/7 : ADD . /app
+ ---> a71a1ae519a5
+Removing intermediate container 24163ac651f7
+Step 6/7 : EXPOSE 80
+ ---> Running in 08ee9a238fe9
+ ---> 49ac44f28ebf
+Removing intermediate container 08ee9a238fe9
+Step 7/7 : CMD gunicorn app:app -b 0.0.0.0:80 --log-file - --access-logfile - --workers 4 --keep-alive 0
+ ---> Running in c16beeac9b9b
+ ---> 499076c0a7d7
+Removing intermediate container c16beeac9b9b
+Successfully built 499076c0a7d7
+WARNING: Image for service vote was built because it did not already exist. To rebuild this image you must use `docker-compose build` or `docker-compose up --build`.
+Building worker
+Step 1/5 : FROM microsoft/dotnet:1.0.0-preview2-sdk
+1.0.0-preview2-sdk: Pulling from microsoft/dotnet
+386a066cd84a: Pull complete
+75ea84187083: Pull complete
+88b459c9f665: Pull complete
+8e36175c5117: Pull complete
+b94be181b2c0: Pull complete
+3e14558fd3a8: Pull complete
+Digest: sha256:1d06dc29b53d6134aa78fd1f38f72bf4ed45223ce67af776c08670cdf1eac963
+Status: Downloaded newer image for microsoft/dotnet:1.0.0-preview2-sdk
+ ---> 6704971aa9c1
+Step 2/5 : WORKDIR /code
+ ---> 3565067a5b0b
+Removing intermediate container c73281bfe771
+Step 3/5 : ADD src/Worker /code/src/Worker
+ ---> ebd5f05e0313
+Removing intermediate container afdc31939546
+Step 4/5 : RUN dotnet restore -v minimal src/     && dotnet publish -c Release -o ./ src/Worker/     && rm -rf src/ $HOME/.nuget/
+ ---> Running in 650ce6534398
+log  : Restoring packages for /code/src/Worker/project.json...
+log  : Installing Microsoft.NETCore.Windows.ApiSets 1.0.1-rc2-24027.
+log  : Installing System.Diagnostics.DiagnosticSource 4.0.0-rc2-24027.
+log  : Installing runtime.native.System.IO.Compression 4.1.0-rc2-24027.
+log  : Installing System.Buffers 4.0.0-rc2-24027.
+log  : Installing Microsoft.NETCore.Runtime.CoreCLR 1.0.2-rc2-24027.
+log  : Installing Microsoft.NETCore.Runtime.Native 1.0.2-rc2-24027.
+log  : Installing Microsoft.NETCore.App 1.0.0.
+log  : Installing Microsoft.NETCore.Targets 1.0.1-rc2-24027.
+log  : Installing System.IO.FileSystem.Watcher 4.0.0-rc2-24027.
+log  : Installing System.Security.Cryptography.Cng 4.1.0-rc2-24027.
+log  : Installing System.Security.Cryptography.Csp 4.0.0-rc2-24027.
+log  : Installing runtime.native.System.Net.Http 4.0.1-rc2-24027.
+log  : Installing runtime.native.System.Security.Cryptography 4.0.0-rc2-24027.
+log  : Installing System.Net.Http 4.0.1-rc2-24027.
+log  : Installing Npgsql 3.1.3.
+log  : Installing System.IO.Compression 4.1.0-rc2-24027.
+log  : Installing System.Globalization.Calendars 4.0.1-rc2-24027.
+log  : Installing System.IO.Compression.ZipFile 4.0.1-rc2-24027.
+log  : Installing Microsoft.NETCore.Runtime 1.0.2-rc2-24027.
+log  : Installing System.AppContext 4.1.0-rc2-24027.
+log  : Installing Microsoft.NETCore.Platforms 1.0.1-rc2-24027.
+log  : Installing Newtonsoft.Json 9.0.1-beta1.
+log  : Installing System.Threading.Tasks.Extensions 4.0.0-rc2-24027.
+log  : Installing System.Reflection.Emit.ILGeneration 4.0.1-rc2-24027.
+log  : Installing System.Diagnostics.Tools 4.0.1-rc2-24027.
+log  : Installing System.Runtime.InteropServices.PInvoke 4.0.0-rc2-24027.
+log  : Installing System.Threading.Overlapped 4.0.1-rc2-24027.
+log  : Installing runtime.native.System 4.0.0-rc2-24027.
+log  : Installing System.IO.FileSystem.Primitives 4.0.1-rc2-24027.
+log  : Installing System.Security.Cryptography.Encoding 4.0.0-rc2-24027.
+log  : Installing StackExchange.Redis 1.1.604-alpha.
+log  : Installing System.Security.Cryptography.OpenSsl 4.0.0-rc2-24027.
+log  : Installing System.Security.Claims 4.0.1-rc2-24027.
+log  : Installing System.Security.Principal 4.0.1-rc2-24027.
+log  : Installing Microsoft.NETCore.Runtime.CoreCLR 1.0.2.
+log  : Installing System.Threading.Timer 4.0.1-rc2-24027.
+log  : Installing System.Security.Cryptography.Primitives 4.0.0-rc2-24027.
+log  : Installing System.Runtime.InteropServices.RuntimeInformation 4.0.0-rc2-24027.
+log  : Installing runtime.native.System.Net.Security 4.0.1-rc2-24027.
+log  : Installing System.Security.Principal.Windows 4.0.0-rc2-24027.
+log  : Installing System.Threading.Thread 4.0.0-rc2-24027.
+log  : Installing System.Diagnostics.Tracing 4.1.0-rc2-24027.
+log  : Installing System.Reflection.TypeExtensions 4.1.0-rc2-24027.
+log  : Installing System.Diagnostics.Contracts 4.0.1-rc2-24027.
+log  : Installing System.ComponentModel 4.0.1-rc2-24027.
+log  : Installing Microsoft.Win32.Primitives 4.0.1-rc2-24027.
+log  : Installing System.ComponentModel.Primitives 4.0.1-rc2-24027.
+log  : Installing System.Reflection.Extensions 4.0.1-rc2-24027.
+log  : Installing System.Reflection.Primitives 4.0.1-rc2-24027.
+log  : Installing System.Text.Encoding.Extensions 4.0.11-rc2-24027.
+log  : Installing System.Runtime.Handles 4.0.1-rc2-24027.
+log  : Installing Microsoft.NETCore.Jit 1.0.2.
+log  : Installing System.Net.Primitives 4.0.11-rc2-24027.
+log  : Installing System.Security.Cryptography.X509Certificates 4.1.0-rc2-24027.
+log  : Installing System.Globalization.Extensions 4.0.1-rc2-24027.
+log  : Installing System.IO.FileSystem 4.0.1-rc2-24027.
+log  : Installing System.Runtime.Numerics 4.0.1-rc2-24027.
+log  : Installing System.Security.Cryptography.Algorithms 4.1.0-rc2-24027.
+log  : Installing System.ComponentModel.TypeConverter 4.0.1-rc2-24027.
+log  : Installing System.Collections.NonGeneric 4.0.1-rc2-24027.
+log  : Installing System.Text.RegularExpressions 4.0.12-rc2-24027.
+log  : Installing System.Threading.ThreadPool 4.0.10-rc2-24027.
+log  : Installing System.Reflection.Emit 4.0.1-rc2-24027.
+log  : Installing System.Linq 4.1.0-rc2-24027.
+log  : Installing NETStandard.Library 1.5.0-rc2-24027.
+log  : Installing System.Reflection.Emit.Lightweight 4.0.1-rc2-24027.
+log  : Installing System.Xml.ReaderWriter 4.0.11-rc2-24027.
+log  : Installing System.Net.Sockets 4.1.0-rc2-24027.
+log  : Installing System.Net.NameResolution 4.0.0-rc2-24027.
+log  : Installing System.Net.Security 4.0.0-rc2-24027.
+log  : Installing Microsoft.CSharp 4.0.1-rc2-24027.
+log  : Installing System.Net.NetworkInformation 4.1.0-rc2-24027.
+log  : Installing System.Linq.Expressions 4.0.11-rc2-24027.
+log  : Installing System.Collections.Concurrent 4.0.12-rc2-24027.
+log  : Installing System.Data.Common 4.0.1-rc2-24027.
+log  : Installing System.Threading.Tasks 4.0.11-rc2-24027.
+log  : Installing System.Threading 4.0.11-rc2-24027.
+log  : Installing System.Collections 4.0.11-rc2-24027.
+log  : Installing System.Console 4.0.0-rc2-24027.
+log  : Installing System.Reflection 4.1.0-rc2-24027.
+log  : Installing System.IO 4.1.0-rc2-24027.
+log  : Installing System.Runtime.InteropServices 4.1.0-rc2-24027.
+log  : Installing System.Runtime.Extensions 4.1.0-rc2-24027.
+log  : Installing System.Dynamic.Runtime 4.0.11-rc2-24027.
+log  : Installing System.Runtime 4.1.0-rc2-24027.
+log  : Installing System.Xml.XDocument 4.0.11-rc2-24027.
+log  : Installing System.Globalization 4.0.11-rc2-24027.
+log  : Installing System.Resources.ResourceManager 4.0.1-rc2-24027.
+log  : Installing System.ObjectModel 4.0.12-rc2-24027.
+log  : Installing System.Diagnostics.Debug 4.0.11-rc2-24027.
+log  : Installing System.Text.Encoding 4.0.11-rc2-24027.
+log  : Installing System.Runtime.Serialization.Primitives 4.1.1-rc2-24027.
+log  : Writing lock file to disk. Path: /code/src/Worker/project.lock.json
+log  : src/Worker/project.json
+log  : Restore completed in 15804ms.
+Publishing Worker for .NETCoreApp,Version=v1.0
+Project Worker (.NETCoreApp,Version=v1.0) will be compiled because expected outputs are missing
+Compiling Worker for .NETCoreApp,Version=v1.0
+
+Compilation succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time elapsed 00:00:01.7479326
+ 
+
+publish: Published to ./
+Published 1/1 projects successfully
+ ---> d321fd6239d5
+Removing intermediate container 650ce6534398
+Step 5/5 : CMD dotnet Worker.dll
+ ---> Running in 5bd05ea8f92e
+ ---> cfe7194e69f0
+Removing intermediate container 5bd05ea8f92e
+Successfully built cfe7194e69f0
+WARNING: Image for service worker was built because it did not already exist. To rebuild this image you must use `docker-compose build` or `docker-compose up --build`.
+Pulling redis (redis:alpine)...
+alpine: Pulling from library/redis
+0a8490d0dfd3: Already exists
+c8d0e817ebe2: Pull complete
+7f2a4f935feb: Pull complete
+622eb636e54d: Pull complete
+4d816b2b1c21: Pull complete
+b3a7b307dbd4: Pull complete
+Digest: sha256:ebba7176d5fbbb69477cf39382b97cc6177af0b2c9678f9240b11e85209df531
+Status: Downloaded newer image for redis:alpine
+Pulling db (postgres:9.4)...
+9.4: Pulling from library/postgres
+5040bd298390: Pull complete
+f08454c3c700: Pull complete
+4db038cdfe03: Pull complete
+e1d9ba315f03: Pull complete
+25e0ee93170e: Pull complete
+3f28084c3f51: Pull complete
+76d12bfb9a68: Pull complete
+6cc4865c8c35: Pull complete
+37dde1aef698: Pull complete
+14c5bb3a3721: Pull complete
+0ea50576a1d9: Pull complete
+b3efbbe19e87: Pull complete
+8b7fe7b57388: Pull complete
+Digest: sha256:c681c72ff62b637b9ad3806a946f14450f74ee0888ca70ec1472a4e0552054c2
+Status: Downloaded newer image for postgres:9.4
+Building result
+Step 1/11 : FROM node:5.11.0-slim
+5.11.0-slim: Pulling from library/node
+8b87079b7a06: Pull complete
+a3ed95caeb02: Pull complete
+1bb8eaf3d643: Pull complete
+5674f5dccbc4: Pull complete
+96a79bcf8a3b: Pull complete
+Digest: sha256:fb4e332730514c393a78a3f0be6b6e1a7f7f3a63c9e670d6ccb0d54d3b9c4985
+Status: Downloaded newer image for node:5.11.0-slim
+ ---> cb888ea932ad
+Step 2/11 : WORKDIR /app
+ ---> 3bc64d37328c
+Removing intermediate container 5650cb5fa4ad
+Step 3/11 : RUN npm install -g nodemon
+ ---> Running in c9b9a5cd0c1d
+npm info it worked if it ends with ok
+npm info using npm@3.8.6
+npm info using node@v5.11.0
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/nodemon
+npm http 200 https://registry.npmjs.org/nodemon
+npm info addNameTag [ 'nodemon', 'latest' ]
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/nodemon/-/nodemon-1.11.0.tgz
+npm http fetch 200 https://registry.npmjs.org/nodemon/-/nodemon-1.11.0.tgz
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/chokidar
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/debug
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/es6-promise
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/ignore-by-default
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/lodash.defaults
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/minimatch
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/ps-tree
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/touch
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/undefsafe
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/update-notifier
+npm http 200 https://registry.npmjs.org/chokidar
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/chokidar/-/chokidar-1.6.1.tgz
+npm http 200 https://registry.npmjs.org/es6-promise
+npm http 200 https://registry.npmjs.org/ps-tree
+npm http 200 https://registry.npmjs.org/lodash.defaults
+npm http fetch 200 https://registry.npmjs.org/chokidar/-/chokidar-1.6.1.tgz
+npm http 200 https://registry.npmjs.org/undefsafe
+npm http 200 https://registry.npmjs.org/update-notifier
+npm http 200 https://registry.npmjs.org/ignore-by-default
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/es6-promise/-/es6-promise-3.3.1.tgz
+npm http 200 https://registry.npmjs.org/touch
+npm http 200 https://registry.npmjs.org/debug
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/ps-tree/-/ps-tree-1.1.0.tgz
+npm http 200 https://registry.npmjs.org/minimatch
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/lodash.defaults/-/lodash.defaults-3.1.2.tgz
+npm http fetch 200 https://registry.npmjs.org/es6-promise/-/es6-promise-3.3.1.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/undefsafe/-/undefsafe-0.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/update-notifier/-/update-notifier-0.5.0.tgz
+npm http fetch 200 https://registry.npmjs.org/ps-tree/-/ps-tree-1.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash.defaults/-/lodash.defaults-3.1.2.tgz
+npm http fetch 200 https://registry.npmjs.org/update-notifier/-/update-notifier-0.5.0.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/ignore-by-default/-/ignore-by-default-1.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/touch/-/touch-1.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/debug/-/debug-2.6.1.tgz
+npm http fetch 200 https://registry.npmjs.org/undefsafe/-/undefsafe-0.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/minimatch/-/minimatch-3.0.3.tgz
+npm http fetch 200 https://registry.npmjs.org/ignore-by-default/-/ignore-by-default-1.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/touch/-/touch-1.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/debug/-/debug-2.6.1.tgz
+npm http fetch 200 https://registry.npmjs.org/minimatch/-/minimatch-3.0.3.tgz
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/anymatch
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/async-each
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/glob-parent
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/inherits
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/is-binary-path
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/is-glob
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/path-is-absolute
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/readdirp
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http request GET https://registry.npmjs.org/fsevents
+npm http 200 https://registry.npmjs.org/anymatch
+npm http 200 https://registry.npmjs.org/async-each
+npm http 200 https://registry.npmjs.org/path-is-absolute
+npm http 200 https://registry.npmjs.org/inherits
+npm http 200 https://registry.npmjs.org/is-glob
+npm http 200 https://registry.npmjs.org/is-binary-path
+npm http 200 https://registry.npmjs.org/glob-parent
+npm http 200 https://registry.npmjs.org/readdirp
+npm http 200 https://registry.npmjs.org/fsevents
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/anymatch/-/anymatch-1.3.0.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/async-each/-/async-each-1.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/path-is-absolute/-/path-is-absolute-1.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/inherits/-/inherits-2.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/is-binary-path/-/is-binary-path-1.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/is-glob/-/is-glob-2.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/glob-parent/-/glob-parent-2.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:10 PM
+npm info attempt registry request try #1 at 3:48:10 PM
+npm http fetch GET https://registry.npmjs.org/readdirp/-/readdirp-2.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/anymatch/-/anymatch-1.3.0.tgz
+npm http fetch 200 https://registry.npmjs.org/path-is-absolute/-/path-is-absolute-1.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/async-each/-/async-each-1.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/inherits/-/inherits-2.0.3.tgz
+npm http fetch 200 https://registry.npmjs.org/is-glob/-/is-glob-2.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/is-binary-path/-/is-binary-path-1.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/glob-parent/-/glob-parent-2.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/readdirp/-/readdirp-2.1.0.tgz
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/arrify
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/micromatch
+npm http 200 https://registry.npmjs.org/arrify
+npm http 200 https://registry.npmjs.org/micromatch
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/arrify/-/arrify-1.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/micromatch/-/micromatch-2.3.11.tgz
+npm http fetch 200 https://registry.npmjs.org/arrify/-/arrify-1.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/micromatch/-/micromatch-2.3.11.tgz
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/arr-diff
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/array-unique
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/braces
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/expand-brackets
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/extglob
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/filename-regex
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/is-extglob
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/kind-of
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/normalize-path
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/object.omit
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/parse-glob
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/regex-cache
+npm http 200 https://registry.npmjs.org/array-unique
+npm http 200 https://registry.npmjs.org/arr-diff
+npm http 200 https://registry.npmjs.org/expand-brackets
+npm http 200 https://registry.npmjs.org/is-extglob
+npm http 200 https://registry.npmjs.org/filename-regex
+npm http 200 https://registry.npmjs.org/kind-of
+npm http 200 https://registry.npmjs.org/normalize-path
+npm http 200 https://registry.npmjs.org/object.omit
+npm http 200 https://registry.npmjs.org/extglob
+npm http 200 https://registry.npmjs.org/braces
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/array-unique/-/array-unique-0.2.1.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/arr-diff/-/arr-diff-2.0.0.tgz
+npm http 200 https://registry.npmjs.org/parse-glob
+npm http 200 https://registry.npmjs.org/regex-cache
+npm http fetch 200 https://registry.npmjs.org/array-unique/-/array-unique-0.2.1.tgz
+npm http fetch 200 https://registry.npmjs.org/arr-diff/-/arr-diff-2.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/expand-brackets/-/expand-brackets-0.1.5.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/is-extglob/-/is-extglob-1.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/filename-regex/-/filename-regex-2.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/kind-of/-/kind-of-3.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/normalize-path/-/normalize-path-2.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/object.omit/-/object.omit-2.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/expand-brackets/-/expand-brackets-0.1.5.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/extglob/-/extglob-0.3.2.tgz
+npm http fetch 200 https://registry.npmjs.org/is-extglob/-/is-extglob-1.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/filename-regex/-/filename-regex-2.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/kind-of/-/kind-of-3.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/normalize-path/-/normalize-path-2.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/object.omit/-/object.omit-2.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/braces/-/braces-1.8.5.tgz
+npm http fetch 200 https://registry.npmjs.org/extglob/-/extglob-0.3.2.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/parse-glob/-/parse-glob-3.0.4.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/regex-cache/-/regex-cache-0.4.3.tgz
+npm http fetch 200 https://registry.npmjs.org/braces/-/braces-1.8.5.tgz
+npm http fetch 200 https://registry.npmjs.org/parse-glob/-/parse-glob-3.0.4.tgz
+npm http fetch 200 https://registry.npmjs.org/regex-cache/-/regex-cache-0.4.3.tgz
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/arr-flatten
+npm http 200 https://registry.npmjs.org/arr-flatten
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/arr-flatten/-/arr-flatten-1.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/arr-flatten/-/arr-flatten-1.0.1.tgz
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/expand-range
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/preserve
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/repeat-element
+npm http 200 https://registry.npmjs.org/preserve
+npm http 200 https://registry.npmjs.org/expand-range
+npm http 200 https://registry.npmjs.org/repeat-element
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/preserve/-/preserve-0.2.0.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/repeat-element/-/repeat-element-1.1.2.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/expand-range/-/expand-range-1.8.2.tgz
+npm http fetch 200 https://registry.npmjs.org/preserve/-/preserve-0.2.0.tgz
+npm http fetch 200 https://registry.npmjs.org/repeat-element/-/repeat-element-1.1.2.tgz
+npm http fetch 200 https://registry.npmjs.org/expand-range/-/expand-range-1.8.2.tgz
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/fill-range
+npm http 200 https://registry.npmjs.org/fill-range
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/fill-range/-/fill-range-2.2.3.tgz
+npm http fetch 200 https://registry.npmjs.org/fill-range/-/fill-range-2.2.3.tgz
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/is-number
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/isobject
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/randomatic
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/repeat-string
+npm http 200 https://registry.npmjs.org/is-number
+npm http 200 https://registry.npmjs.org/isobject
+npm http 200 https://registry.npmjs.org/repeat-string
+npm http 200 https://registry.npmjs.org/randomatic
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/is-number/-/is-number-2.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/isobject/-/isobject-2.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/repeat-string/-/repeat-string-1.6.1.tgz
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/randomatic/-/randomatic-1.1.6.tgz
+npm http fetch 200 https://registry.npmjs.org/is-number/-/is-number-2.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/isobject/-/isobject-2.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/randomatic/-/randomatic-1.1.6.tgz
+npm http fetch 200 https://registry.npmjs.org/repeat-string/-/repeat-string-1.6.1.tgz
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/is-buffer
+npm http 200 https://registry.npmjs.org/is-buffer
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/is-buffer/-/is-buffer-1.1.4.tgz
+npm http fetch 200 https://registry.npmjs.org/is-buffer/-/is-buffer-1.1.4.tgz
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/isarray
+npm http 200 https://registry.npmjs.org/isarray
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/is-posix-bracket
+npm http 200 https://registry.npmjs.org/is-posix-bracket
+npm info retry fetch attempt 1 at 3:48:11 PM
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http fetch GET https://registry.npmjs.org/is-posix-bracket/-/is-posix-bracket-0.1.1.tgz
+npm http fetch 200 https://registry.npmjs.org/is-posix-bracket/-/is-posix-bracket-0.1.1.tgz
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/for-own
+npm info attempt registry request try #1 at 3:48:11 PM
+npm http request GET https://registry.npmjs.org/is-extendable
+npm http 200 https://registry.npmjs.org/is-extendable
+npm http 200 https://registry.npmjs.org/for-own
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/is-extendable/-/is-extendable-0.1.1.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/for-own/-/for-own-0.1.5.tgz
+npm http fetch 200 https://registry.npmjs.org/is-extendable/-/is-extendable-0.1.1.tgz
+npm http fetch 200 https://registry.npmjs.org/for-own/-/for-own-0.1.5.tgz
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/for-in
+npm http 200 https://registry.npmjs.org/for-in
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/for-in/-/for-in-1.0.2.tgz
+npm http fetch 200 https://registry.npmjs.org/for-in/-/for-in-1.0.2.tgz
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/glob-base
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/is-dotfile
+npm http 200 https://registry.npmjs.org/is-dotfile
+npm http 200 https://registry.npmjs.org/glob-base
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/is-dotfile/-/is-dotfile-1.0.2.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/glob-base/-/glob-base-0.3.0.tgz
+npm http fetch 200 https://registry.npmjs.org/glob-base/-/glob-base-0.3.0.tgz
+npm http fetch 200 https://registry.npmjs.org/is-dotfile/-/is-dotfile-1.0.2.tgz
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/is-equal-shallow
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/is-primitive
+npm http 200 https://registry.npmjs.org/is-primitive
+npm http 200 https://registry.npmjs.org/is-equal-shallow
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/is-primitive/-/is-primitive-2.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/is-equal-shallow/-/is-equal-shallow-0.1.3.tgz
+npm http fetch 200 https://registry.npmjs.org/is-primitive/-/is-primitive-2.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/is-equal-shallow/-/is-equal-shallow-0.1.3.tgz
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/binary-extensions
+npm http 200 https://registry.npmjs.org/binary-extensions
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/binary-extensions/-/binary-extensions-1.8.0.tgz
+npm http fetch 200 https://registry.npmjs.org/binary-extensions/-/binary-extensions-1.8.0.tgz
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/graceful-fs
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/readable-stream
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/set-immediate-shim
+npm http 200 https://registry.npmjs.org/set-immediate-shim
+npm http 200 https://registry.npmjs.org/graceful-fs
+npm http 200 https://registry.npmjs.org/readable-stream
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/set-immediate-shim/-/set-immediate-shim-1.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.1.11.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/readable-stream/-/readable-stream-2.2.3.tgz
+npm http fetch 200 https://registry.npmjs.org/set-immediate-shim/-/set-immediate-shim-1.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.1.11.tgz
+npm http fetch 200 https://registry.npmjs.org/readable-stream/-/readable-stream-2.2.3.tgz
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/brace-expansion
+npm http 200 https://registry.npmjs.org/brace-expansion
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/brace-expansion/-/brace-expansion-1.1.6.tgz
+npm http fetch 200 https://registry.npmjs.org/brace-expansion/-/brace-expansion-1.1.6.tgz
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/balanced-match
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/concat-map
+npm http 200 https://registry.npmjs.org/balanced-match
+npm http 200 https://registry.npmjs.org/concat-map
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/balanced-match/-/balanced-match-0.4.2.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/concat-map/-/concat-map-0.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/balanced-match/-/balanced-match-0.4.2.tgz
+npm http fetch 200 https://registry.npmjs.org/concat-map/-/concat-map-0.0.1.tgz
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/buffer-shims
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/core-util-is
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/process-nextick-args
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/string_decoder
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/util-deprecate
+npm http 200 https://registry.npmjs.org/buffer-shims
+npm http 200 https://registry.npmjs.org/core-util-is
+npm http 200 https://registry.npmjs.org/string_decoder
+npm http 200 https://registry.npmjs.org/process-nextick-args
+npm http 200 https://registry.npmjs.org/util-deprecate
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/buffer-shims/-/buffer-shims-1.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.2.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/string_decoder/-/string_decoder-0.10.31.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/process-nextick-args/-/process-nextick-args-1.0.7.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz
+npm http fetch 200 https://registry.npmjs.org/buffer-shims/-/buffer-shims-1.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.2.tgz
+npm http fetch 200 https://registry.npmjs.org/string_decoder/-/string_decoder-0.10.31.tgz
+npm http fetch 200 https://registry.npmjs.org/process-nextick-args/-/process-nextick-args-1.0.7.tgz
+npm http fetch 200 https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/ms
+npm http 200 https://registry.npmjs.org/ms
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/ms/-/ms-0.7.2.tgz
+npm http fetch 200 https://registry.npmjs.org/ms/-/ms-0.7.2.tgz
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/lodash.assign
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http request GET https://registry.npmjs.org/lodash.restparam
+npm http 200 https://registry.npmjs.org/lodash.restparam
+npm http 200 https://registry.npmjs.org/lodash.assign
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/lodash.restparam/-/lodash.restparam-3.6.1.tgz
+npm info retry fetch attempt 1 at 3:48:12 PM
+npm info attempt registry request try #1 at 3:48:12 PM
+npm http fetch GET https://registry.npmjs.org/lodash.assign/-/lodash.assign-3.2.0.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash.restparam/-/lodash.restparam-3.6.1.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash.assign/-/lodash.assign-3.2.0.tgz
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/lodash._baseassign
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/lodash._createassigner
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/lodash.keys
+npm http 200 https://registry.npmjs.org/lodash._baseassign
+npm http 200 https://registry.npmjs.org/lodash._createassigner
+npm http 200 https://registry.npmjs.org/lodash.keys
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/lodash._baseassign/-/lodash._baseassign-3.2.0.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/lodash._createassigner/-/lodash._createassigner-3.1.1.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/lodash.keys/-/lodash.keys-3.1.2.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash._baseassign/-/lodash._baseassign-3.2.0.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash._createassigner/-/lodash._createassigner-3.1.1.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash.keys/-/lodash.keys-3.1.2.tgz
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/lodash._basecopy
+npm http 200 https://registry.npmjs.org/lodash._basecopy
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/lodash._basecopy/-/lodash._basecopy-3.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash._basecopy/-/lodash._basecopy-3.0.1.tgz
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/lodash._getnative
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/lodash.isarguments
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/lodash.isarray
+npm http 200 https://registry.npmjs.org/lodash._getnative
+npm http 200 https://registry.npmjs.org/lodash.isarguments
+npm http 200 https://registry.npmjs.org/lodash.isarray
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/lodash._getnative/-/lodash._getnative-3.9.1.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/lodash.isarguments/-/lodash.isarguments-3.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/lodash.isarray/-/lodash.isarray-3.0.4.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash._getnative/-/lodash._getnative-3.9.1.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash.isarguments/-/lodash.isarguments-3.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash.isarray/-/lodash.isarray-3.0.4.tgz
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/lodash._bindcallback
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/lodash._isiterateecall
+npm http 200 https://registry.npmjs.org/lodash._isiterateecall
+npm http 200 https://registry.npmjs.org/lodash._bindcallback
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/lodash._isiterateecall/-/lodash._isiterateecall-3.0.9.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/lodash._bindcallback/-/lodash._bindcallback-3.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash._isiterateecall/-/lodash._isiterateecall-3.0.9.tgz
+npm http fetch 200 https://registry.npmjs.org/lodash._bindcallback/-/lodash._bindcallback-3.0.1.tgz
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/event-stream
+npm http 200 https://registry.npmjs.org/event-stream
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/event-stream/-/event-stream-3.3.4.tgz
+npm http fetch 200 https://registry.npmjs.org/event-stream/-/event-stream-3.3.4.tgz
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/through
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/duplexer
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/from
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/map-stream
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/pause-stream
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/split
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/stream-combiner
+npm http 200 https://registry.npmjs.org/duplexer
+npm http 200 https://registry.npmjs.org/through
+npm http 200 https://registry.npmjs.org/from
+npm http 200 https://registry.npmjs.org/map-stream
+npm http 200 https://registry.npmjs.org/stream-combiner
+npm http 200 https://registry.npmjs.org/pause-stream
+npm http 200 https://registry.npmjs.org/split
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/duplexer/-/duplexer-0.1.1.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/through/-/through-2.3.8.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/from/-/from-0.1.3.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/map-stream/-/map-stream-0.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/stream-combiner/-/stream-combiner-0.0.4.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/pause-stream/-/pause-stream-0.0.11.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/split/-/split-0.3.3.tgz
+npm http fetch 200 https://registry.npmjs.org/duplexer/-/duplexer-0.1.1.tgz
+npm http fetch 200 https://registry.npmjs.org/through/-/through-2.3.8.tgz
+npm http fetch 200 https://registry.npmjs.org/from/-/from-0.1.3.tgz
+npm http fetch 200 https://registry.npmjs.org/map-stream/-/map-stream-0.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/stream-combiner/-/stream-combiner-0.0.4.tgz
+npm http fetch 200 https://registry.npmjs.org/pause-stream/-/pause-stream-0.0.11.tgz
+npm http fetch 200 https://registry.npmjs.org/split/-/split-0.3.3.tgz
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/nopt
+npm http 200 https://registry.npmjs.org/nopt
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/nopt/-/nopt-1.0.10.tgz
+npm http fetch 200 https://registry.npmjs.org/nopt/-/nopt-1.0.10.tgz
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/abbrev
+npm http 200 https://registry.npmjs.org/abbrev
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/abbrev/-/abbrev-1.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/abbrev/-/abbrev-1.1.0.tgz
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/chalk
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/configstore
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/is-npm
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/latest-version
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/repeating
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/semver-diff
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/string-length
+npm http 200 https://registry.npmjs.org/configstore
+npm http 200 https://registry.npmjs.org/chalk
+npm http 200 https://registry.npmjs.org/is-npm
+npm http 200 https://registry.npmjs.org/repeating
+npm http 200 https://registry.npmjs.org/semver-diff
+npm http 200 https://registry.npmjs.org/latest-version
+npm http 200 https://registry.npmjs.org/string-length
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/configstore/-/configstore-1.4.0.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/chalk/-/chalk-1.1.3.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/is-npm/-/is-npm-1.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/repeating/-/repeating-1.1.3.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/semver-diff/-/semver-diff-2.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/latest-version/-/latest-version-1.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/string-length/-/string-length-1.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/configstore/-/configstore-1.4.0.tgz
+npm http fetch 200 https://registry.npmjs.org/chalk/-/chalk-1.1.3.tgz
+npm http fetch 200 https://registry.npmjs.org/is-npm/-/is-npm-1.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/repeating/-/repeating-1.1.3.tgz
+npm http fetch 200 https://registry.npmjs.org/semver-diff/-/semver-diff-2.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/latest-version/-/latest-version-1.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/string-length/-/string-length-1.0.1.tgz
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/ansi-styles
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/escape-string-regexp
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/has-ansi
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/strip-ansi
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http request GET https://registry.npmjs.org/supports-color
+npm http 200 https://registry.npmjs.org/escape-string-regexp
+npm http 200 https://registry.npmjs.org/ansi-styles
+npm http 200 https://registry.npmjs.org/has-ansi
+npm http 200 https://registry.npmjs.org/strip-ansi
+npm http 200 https://registry.npmjs.org/supports-color
+npm info retry fetch attempt 1 at 3:48:13 PM
+npm info attempt registry request try #1 at 3:48:13 PM
+npm http fetch GET https://registry.npmjs.org/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/ansi-styles/-/ansi-styles-2.2.1.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/has-ansi/-/has-ansi-2.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/strip-ansi/-/strip-ansi-3.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/supports-color/-/supports-color-2.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz
+npm http fetch 200 https://registry.npmjs.org/ansi-styles/-/ansi-styles-2.2.1.tgz
+npm http fetch 200 https://registry.npmjs.org/has-ansi/-/has-ansi-2.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/strip-ansi/-/strip-ansi-3.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/supports-color/-/supports-color-2.0.0.tgz
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/ansi-regex
+npm http 200 https://registry.npmjs.org/ansi-regex
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/ansi-regex/-/ansi-regex-2.1.1.tgz
+npm http fetch 200 https://registry.npmjs.org/ansi-regex/-/ansi-regex-2.1.1.tgz
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/mkdirp
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/object-assign
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/os-tmpdir
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/osenv
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/uuid
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/write-file-atomic
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/xdg-basedir
+npm http 200 https://registry.npmjs.org/mkdirp
+npm http 200 https://registry.npmjs.org/os-tmpdir
+npm http 200 https://registry.npmjs.org/xdg-basedir
+npm http 200 https://registry.npmjs.org/object-assign
+npm http 200 https://registry.npmjs.org/write-file-atomic
+npm http 200 https://registry.npmjs.org/osenv
+npm http 200 https://registry.npmjs.org/uuid
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/mkdirp/-/mkdirp-0.5.1.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/os-tmpdir/-/os-tmpdir-1.0.2.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/xdg-basedir/-/xdg-basedir-2.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/write-file-atomic/-/write-file-atomic-1.3.1.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/osenv/-/osenv-0.1.4.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/uuid/-/uuid-2.0.3.tgz
+npm http fetch 200 https://registry.npmjs.org/mkdirp/-/mkdirp-0.5.1.tgz
+npm http fetch 200 https://registry.npmjs.org/os-tmpdir/-/os-tmpdir-1.0.2.tgz
+npm http fetch 200 https://registry.npmjs.org/xdg-basedir/-/xdg-basedir-2.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz
+npm http fetch 200 https://registry.npmjs.org/write-file-atomic/-/write-file-atomic-1.3.1.tgz
+npm http fetch 200 https://registry.npmjs.org/osenv/-/osenv-0.1.4.tgz
+npm http fetch 200 https://registry.npmjs.org/uuid/-/uuid-2.0.3.tgz
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/minimist
+npm http 200 https://registry.npmjs.org/minimist
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/minimist/-/minimist-0.0.8.tgz
+npm http fetch 200 https://registry.npmjs.org/minimist/-/minimist-0.0.8.tgz
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/os-homedir
+npm http 200 https://registry.npmjs.org/os-homedir
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/os-homedir/-/os-homedir-1.0.2.tgz
+npm http fetch 200 https://registry.npmjs.org/os-homedir/-/os-homedir-1.0.2.tgz
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/imurmurhash
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/slide
+npm http 200 https://registry.npmjs.org/slide
+npm http 200 https://registry.npmjs.org/imurmurhash
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/slide/-/slide-1.1.6.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/imurmurhash/-/imurmurhash-0.1.4.tgz
+npm http fetch 200 https://registry.npmjs.org/slide/-/slide-1.1.6.tgz
+npm http fetch 200 https://registry.npmjs.org/imurmurhash/-/imurmurhash-0.1.4.tgz
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/package-json
+npm http 200 https://registry.npmjs.org/package-json
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/package-json/-/package-json-1.2.0.tgz
+npm http fetch 200 https://registry.npmjs.org/package-json/-/package-json-1.2.0.tgz
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/got
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/registry-url
+npm http 200 https://registry.npmjs.org/registry-url
+npm http 200 https://registry.npmjs.org/got
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/registry-url/-/registry-url-3.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/got/-/got-3.3.1.tgz
+npm http fetch 200 https://registry.npmjs.org/registry-url/-/registry-url-3.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/got/-/got-3.3.1.tgz
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/duplexify
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/infinity-agent
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/is-redirect
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/is-stream
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/lowercase-keys
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/nested-error-stacks
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/prepend-http
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/read-all-stream
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/timed-out
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/object-assign/-/object-assign-3.0.0.tgz
+npm http 200 https://registry.npmjs.org/infinity-agent
+npm http 200 https://registry.npmjs.org/is-redirect
+npm http fetch 200 https://registry.npmjs.org/object-assign/-/object-assign-3.0.0.tgz
+npm http 200 https://registry.npmjs.org/is-stream
+npm http 200 https://registry.npmjs.org/duplexify
+npm http 200 https://registry.npmjs.org/lowercase-keys
+npm http 200 https://registry.npmjs.org/prepend-http
+npm http 200 https://registry.npmjs.org/timed-out
+npm http 200 https://registry.npmjs.org/nested-error-stacks
+npm http 200 https://registry.npmjs.org/read-all-stream
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/infinity-agent/-/infinity-agent-2.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/is-redirect/-/is-redirect-1.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/is-stream/-/is-stream-1.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/duplexify/-/duplexify-3.5.0.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/lowercase-keys/-/lowercase-keys-1.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/prepend-http/-/prepend-http-1.0.4.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/timed-out/-/timed-out-2.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/nested-error-stacks/-/nested-error-stacks-1.0.2.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/read-all-stream/-/read-all-stream-3.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/infinity-agent/-/infinity-agent-2.0.3.tgz
+npm http fetch 200 https://registry.npmjs.org/is-redirect/-/is-redirect-1.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/is-stream/-/is-stream-1.1.0.tgz
+npm http fetch 200 https://registry.npmjs.org/duplexify/-/duplexify-3.5.0.tgz
+npm http fetch 200 https://registry.npmjs.org/lowercase-keys/-/lowercase-keys-1.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/prepend-http/-/prepend-http-1.0.4.tgz
+npm http fetch 200 https://registry.npmjs.org/timed-out/-/timed-out-2.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/nested-error-stacks/-/nested-error-stacks-1.0.2.tgz
+npm http fetch 200 https://registry.npmjs.org/read-all-stream/-/read-all-stream-3.1.0.tgz
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/end-of-stream
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/stream-shift
+npm http 200 https://registry.npmjs.org/end-of-stream
+npm http 200 https://registry.npmjs.org/stream-shift
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/end-of-stream/-/end-of-stream-1.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:14 PM
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http fetch GET https://registry.npmjs.org/stream-shift/-/stream-shift-1.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/end-of-stream/-/end-of-stream-1.0.0.tgz
+npm http fetch 200 https://registry.npmjs.org/stream-shift/-/stream-shift-1.0.0.tgz
+npm info attempt registry request try #1 at 3:48:14 PM
+npm http request GET https://registry.npmjs.org/once
+npm http 200 https://registry.npmjs.org/once
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/once/-/once-1.3.3.tgz
+npm http fetch 200 https://registry.npmjs.org/once/-/once-1.3.3.tgz
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http request GET https://registry.npmjs.org/wrappy
+npm http 200 https://registry.npmjs.org/wrappy
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz
+npm http fetch 200 https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http request GET https://registry.npmjs.org/pinkie-promise
+npm http 200 https://registry.npmjs.org/pinkie-promise
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/pinkie-promise/-/pinkie-promise-2.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/pinkie-promise/-/pinkie-promise-2.0.1.tgz
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http request GET https://registry.npmjs.org/pinkie
+npm http 200 https://registry.npmjs.org/pinkie
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/pinkie/-/pinkie-2.0.4.tgz
+npm http fetch 200 https://registry.npmjs.org/pinkie/-/pinkie-2.0.4.tgz
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http request GET https://registry.npmjs.org/rc
+npm http 200 https://registry.npmjs.org/rc
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/rc/-/rc-1.1.7.tgz
+npm http fetch 200 https://registry.npmjs.org/rc/-/rc-1.1.7.tgz
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http request GET https://registry.npmjs.org/deep-extend
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http request GET https://registry.npmjs.org/ini
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http request GET https://registry.npmjs.org/strip-json-comments
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/minimist/-/minimist-1.2.0.tgz
+npm http 200 https://registry.npmjs.org/ini
+npm http fetch 200 https://registry.npmjs.org/minimist/-/minimist-1.2.0.tgz
+npm http 200 https://registry.npmjs.org/deep-extend
+npm http 200 https://registry.npmjs.org/strip-json-comments
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/deep-extend/-/deep-extend-0.4.1.tgz
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/ini/-/ini-1.3.4.tgz
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/strip-json-comments/-/strip-json-comments-2.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/deep-extend/-/deep-extend-0.4.1.tgz
+npm http fetch 200 https://registry.npmjs.org/ini/-/ini-1.3.4.tgz
+npm http fetch 200 https://registry.npmjs.org/strip-json-comments/-/strip-json-comments-2.0.1.tgz
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http request GET https://registry.npmjs.org/is-finite
+npm http 200 https://registry.npmjs.org/is-finite
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/is-finite/-/is-finite-1.0.2.tgz
+npm http fetch 200 https://registry.npmjs.org/is-finite/-/is-finite-1.0.2.tgz
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http request GET https://registry.npmjs.org/number-is-nan
+npm http 200 https://registry.npmjs.org/number-is-nan
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/number-is-nan/-/number-is-nan-1.0.1.tgz
+npm http fetch 200 https://registry.npmjs.org/number-is-nan/-/number-is-nan-1.0.1.tgz
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http request GET https://registry.npmjs.org/semver
+npm http 200 https://registry.npmjs.org/semver
+npm info retry fetch attempt 1 at 3:48:15 PM
+npm info attempt registry request try #1 at 3:48:15 PM
+npm http fetch GET https://registry.npmjs.org/semver/-/semver-5.3.0.tgz
+npm http fetch 200 https://registry.npmjs.org/semver/-/semver-5.3.0.tgz
+npm info lifecycle abbrev@1.1.0~preinstall: abbrev@1.1.0
+npm info lifecycle ansi-regex@2.1.1~preinstall: ansi-regex@2.1.1
+npm info lifecycle ansi-styles@2.2.1~preinstall: ansi-styles@2.2.1
+npm info lifecycle arr-flatten@1.0.1~preinstall: arr-flatten@1.0.1
+npm info lifecycle arr-diff@2.0.0~preinstall: arr-diff@2.0.0
+npm info lifecycle array-unique@0.2.1~preinstall: array-unique@0.2.1
+npm info lifecycle arrify@1.0.1~preinstall: arrify@1.0.1
+npm info lifecycle async-each@1.0.1~preinstall: async-each@1.0.1
+npm info lifecycle balanced-match@0.4.2~preinstall: balanced-match@0.4.2
+npm info lifecycle binary-extensions@1.8.0~preinstall: binary-extensions@1.8.0
+npm info lifecycle buffer-shims@1.0.0~preinstall: buffer-shims@1.0.0
+npm info lifecycle concat-map@0.0.1~preinstall: concat-map@0.0.1
+npm info lifecycle brace-expansion@1.1.6~preinstall: brace-expansion@1.1.6
+npm info lifecycle core-util-is@1.0.2~preinstall: core-util-is@1.0.2
+npm info lifecycle deep-extend@0.4.1~preinstall: deep-extend@0.4.1
+npm info lifecycle duplexer@0.1.1~preinstall: duplexer@0.1.1
+npm info lifecycle es6-promise@3.3.1~preinstall: es6-promise@3.3.1
+npm info lifecycle escape-string-regexp@1.0.5~preinstall: escape-string-regexp@1.0.5
+npm info lifecycle filename-regex@2.0.0~preinstall: filename-regex@2.0.0
+npm info lifecycle for-in@1.0.2~preinstall: for-in@1.0.2
+npm info lifecycle for-own@0.1.5~preinstall: for-own@0.1.5
+npm info lifecycle from@0.1.3~preinstall: from@0.1.3
+npm info lifecycle object-assign@3.0.0~preinstall: object-assign@3.0.0
+npm info lifecycle graceful-fs@4.1.11~preinstall: graceful-fs@4.1.11
+npm info lifecycle has-ansi@2.0.0~preinstall: has-ansi@2.0.0
+npm info lifecycle ignore-by-default@1.0.1~preinstall: ignore-by-default@1.0.1
+npm info lifecycle imurmurhash@0.1.4~preinstall: imurmurhash@0.1.4
+npm info lifecycle infinity-agent@2.0.3~preinstall: infinity-agent@2.0.3
+npm info lifecycle inherits@2.0.3~preinstall: inherits@2.0.3
+npm info lifecycle ini@1.3.4~preinstall: ini@1.3.4
+npm info lifecycle is-binary-path@1.0.1~preinstall: is-binary-path@1.0.1
+npm info lifecycle is-buffer@1.1.4~preinstall: is-buffer@1.1.4
+npm info lifecycle is-dotfile@1.0.2~preinstall: is-dotfile@1.0.2
+npm info lifecycle is-extendable@0.1.1~preinstall: is-extendable@0.1.1
+npm info lifecycle is-extglob@1.0.0~preinstall: is-extglob@1.0.0
+npm info lifecycle extglob@0.3.2~preinstall: extglob@0.3.2
+npm info lifecycle is-glob@2.0.1~preinstall: is-glob@2.0.1
+npm info lifecycle glob-parent@2.0.0~preinstall: glob-parent@2.0.0
+npm info lifecycle glob-base@0.3.0~preinstall: glob-base@0.3.0
+npm info lifecycle is-npm@1.0.0~preinstall: is-npm@1.0.0
+npm info lifecycle is-posix-bracket@0.1.1~preinstall: is-posix-bracket@0.1.1
+npm info lifecycle expand-brackets@0.1.5~preinstall: expand-brackets@0.1.5
+npm info lifecycle is-primitive@2.0.0~preinstall: is-primitive@2.0.0
+npm info lifecycle is-equal-shallow@0.1.3~preinstall: is-equal-shallow@0.1.3
+npm info lifecycle is-redirect@1.0.0~preinstall: is-redirect@1.0.0
+npm info lifecycle is-stream@1.1.0~preinstall: is-stream@1.1.0
+npm info lifecycle isarray@1.0.0~preinstall: isarray@1.0.0
+npm info lifecycle isobject@2.1.0~preinstall: isobject@2.1.0
+npm info lifecycle kind-of@3.1.0~preinstall: kind-of@3.1.0
+npm info lifecycle is-number@2.1.0~preinstall: is-number@2.1.0
+npm info lifecycle lodash._basecopy@3.0.1~preinstall: lodash._basecopy@3.0.1
+npm info lifecycle lodash._bindcallback@3.0.1~preinstall: lodash._bindcallback@3.0.1
+npm info lifecycle lodash._getnative@3.9.1~preinstall: lodash._getnative@3.9.1
+npm info lifecycle lodash._isiterateecall@3.0.9~preinstall: lodash._isiterateecall@3.0.9
+npm info lifecycle lodash.isarguments@3.1.0~preinstall: lodash.isarguments@3.1.0
+npm info lifecycle lodash.isarray@3.0.4~preinstall: lodash.isarray@3.0.4
+npm info lifecycle lodash.keys@3.1.2~preinstall: lodash.keys@3.1.2
+npm info lifecycle lodash._baseassign@3.2.0~preinstall: lodash._baseassign@3.2.0
+npm info lifecycle lodash.restparam@3.6.1~preinstall: lodash.restparam@3.6.1
+npm info lifecycle lodash._createassigner@3.1.1~preinstall: lodash._createassigner@3.1.1
+npm info lifecycle lodash.assign@3.2.0~preinstall: lodash.assign@3.2.0
+npm info lifecycle lodash.defaults@3.1.2~preinstall: lodash.defaults@3.1.2
+npm info lifecycle lowercase-keys@1.0.0~preinstall: lowercase-keys@1.0.0
+npm info lifecycle map-stream@0.1.0~preinstall: map-stream@0.1.0
+npm info lifecycle minimatch@3.0.3~preinstall: minimatch@3.0.3
+npm info lifecycle minimist@0.0.8~preinstall: minimist@0.0.8
+npm info lifecycle mkdirp@0.5.1~preinstall: mkdirp@0.5.1
+npm info lifecycle ms@0.7.2~preinstall: ms@0.7.2
+npm info lifecycle debug@2.6.1~preinstall: debug@2.6.1
+npm info lifecycle nested-error-stacks@1.0.2~preinstall: nested-error-stacks@1.0.2
+npm info lifecycle nopt@1.0.10~preinstall: nopt@1.0.10
+npm info lifecycle normalize-path@2.0.1~preinstall: normalize-path@2.0.1
+npm info lifecycle number-is-nan@1.0.1~preinstall: number-is-nan@1.0.1
+npm info lifecycle is-finite@1.0.2~preinstall: is-finite@1.0.2
+npm info lifecycle object-assign@4.1.1~preinstall: object-assign@4.1.1
+npm info lifecycle object.omit@2.0.1~preinstall: object.omit@2.0.1
+npm info lifecycle os-homedir@1.0.2~preinstall: os-homedir@1.0.2
+npm info lifecycle os-tmpdir@1.0.2~preinstall: os-tmpdir@1.0.2
+npm info lifecycle osenv@0.1.4~preinstall: osenv@0.1.4
+npm info lifecycle parse-glob@3.0.4~preinstall: parse-glob@3.0.4
+npm info lifecycle path-is-absolute@1.0.1~preinstall: path-is-absolute@1.0.1
+npm info lifecycle pinkie@2.0.4~preinstall: pinkie@2.0.4
+npm info lifecycle pinkie-promise@2.0.1~preinstall: pinkie-promise@2.0.1
+npm info lifecycle prepend-http@1.0.4~preinstall: prepend-http@1.0.4
+npm info lifecycle preserve@0.2.0~preinstall: preserve@0.2.0
+npm info lifecycle process-nextick-args@1.0.7~preinstall: process-nextick-args@1.0.7
+npm info lifecycle randomatic@1.1.6~preinstall: randomatic@1.1.6
+npm info lifecycle minimist@1.2.0~preinstall: minimist@1.2.0
+npm info lifecycle regex-cache@0.4.3~preinstall: regex-cache@0.4.3
+npm info lifecycle repeat-element@1.1.2~preinstall: repeat-element@1.1.2
+npm info lifecycle repeat-string@1.6.1~preinstall: repeat-string@1.6.1
+npm info lifecycle fill-range@2.2.3~preinstall: fill-range@2.2.3
+npm info lifecycle expand-range@1.8.2~preinstall: expand-range@1.8.2
+npm info lifecycle braces@1.8.5~preinstall: braces@1.8.5
+npm info lifecycle micromatch@2.3.11~preinstall: micromatch@2.3.11
+npm info lifecycle anymatch@1.3.0~preinstall: anymatch@1.3.0
+npm info lifecycle repeating@1.1.3~preinstall: repeating@1.1.3
+npm info lifecycle semver@5.3.0~preinstall: semver@5.3.0
+npm info lifecycle semver-diff@2.1.0~preinstall: semver-diff@2.1.0
+npm info lifecycle set-immediate-shim@1.0.1~preinstall: set-immediate-shim@1.0.1
+npm info lifecycle slide@1.1.6~preinstall: slide@1.1.6
+npm info lifecycle stream-combiner@0.0.4~preinstall: stream-combiner@0.0.4
+npm info lifecycle stream-shift@1.0.0~preinstall: stream-shift@1.0.0
+npm info lifecycle string_decoder@0.10.31~preinstall: string_decoder@0.10.31
+npm info lifecycle strip-ansi@3.0.1~preinstall: strip-ansi@3.0.1
+npm info lifecycle string-length@1.0.1~preinstall: string-length@1.0.1
+npm info lifecycle strip-json-comments@2.0.1~preinstall: strip-json-comments@2.0.1
+npm info lifecycle rc@1.1.7~preinstall: rc@1.1.7
+npm info lifecycle registry-url@3.1.0~preinstall: registry-url@3.1.0
+npm info lifecycle supports-color@2.0.0~preinstall: supports-color@2.0.0
+npm info lifecycle chalk@1.1.3~preinstall: chalk@1.1.3
+npm info lifecycle through@2.3.8~preinstall: through@2.3.8
+npm info lifecycle split@0.3.3~preinstall: split@0.3.3
+npm info lifecycle pause-stream@0.0.11~preinstall: pause-stream@0.0.11
+npm info lifecycle event-stream@3.3.4~preinstall: event-stream@3.3.4
+npm info lifecycle ps-tree@1.1.0~preinstall: ps-tree@1.1.0
+npm info lifecycle timed-out@2.0.0~preinstall: timed-out@2.0.0
+npm info lifecycle touch@1.0.0~preinstall: touch@1.0.0
+npm info lifecycle undefsafe@0.0.3~preinstall: undefsafe@0.0.3
+npm info lifecycle util-deprecate@1.0.2~preinstall: util-deprecate@1.0.2
+npm info lifecycle readable-stream@2.2.3~preinstall: readable-stream@2.2.3
+npm info lifecycle readdirp@2.1.0~preinstall: readdirp@2.1.0
+npm info lifecycle chokidar@1.6.1~preinstall: chokidar@1.6.1
+npm info lifecycle read-all-stream@3.1.0~preinstall: read-all-stream@3.1.0
+npm info lifecycle uuid@2.0.3~preinstall: uuid@2.0.3
+npm info lifecycle wrappy@1.0.2~preinstall: wrappy@1.0.2
+npm info lifecycle once@1.3.3~preinstall: once@1.3.3
+npm info lifecycle end-of-stream@1.0.0~preinstall: end-of-stream@1.0.0
+npm info lifecycle duplexify@3.5.0~preinstall: duplexify@3.5.0
+npm info lifecycle got@3.3.1~preinstall: got@3.3.1
+npm info lifecycle package-json@1.2.0~preinstall: package-json@1.2.0
+npm info lifecycle latest-version@1.0.1~preinstall: latest-version@1.0.1
+npm info lifecycle write-file-atomic@1.3.1~preinstall: write-file-atomic@1.3.1
+npm info lifecycle xdg-basedir@2.0.0~preinstall: xdg-basedir@2.0.0
+npm info lifecycle configstore@1.4.0~preinstall: configstore@1.4.0
+npm info lifecycle update-notifier@0.5.0~preinstall: update-notifier@0.5.0
+npm info lifecycle nodemon@1.11.0~preinstall: nodemon@1.11.0
+npm info linkStuff abbrev@1.1.0
+npm info linkStuff ansi-regex@2.1.1
+npm info linkStuff ansi-styles@2.2.1
+npm info linkStuff arr-flatten@1.0.1
+npm info linkStuff arr-diff@2.0.0
+npm info linkStuff array-unique@0.2.1
+npm info linkStuff arrify@1.0.1
+npm info linkStuff async-each@1.0.1
+npm info linkStuff balanced-match@0.4.2
+npm info linkStuff binary-extensions@1.8.0
+npm info linkStuff buffer-shims@1.0.0
+npm info linkStuff concat-map@0.0.1
+npm info linkStuff brace-expansion@1.1.6
+npm info linkStuff core-util-is@1.0.2
+npm info linkStuff deep-extend@0.4.1
+npm info linkStuff duplexer@0.1.1
+npm info linkStuff es6-promise@3.3.1
+npm info linkStuff escape-string-regexp@1.0.5
+npm info linkStuff filename-regex@2.0.0
+npm info linkStuff for-in@1.0.2
+npm info linkStuff for-own@0.1.5
+npm info linkStuff from@0.1.3
+npm info linkStuff object-assign@3.0.0
+npm info linkStuff graceful-fs@4.1.11
+npm info linkStuff has-ansi@2.0.0
+npm info linkStuff ignore-by-default@1.0.1
+npm info linkStuff imurmurhash@0.1.4
+npm info linkStuff infinity-agent@2.0.3
+npm info linkStuff inherits@2.0.3
+npm info linkStuff ini@1.3.4
+npm info linkStuff is-binary-path@1.0.1
+npm info linkStuff is-buffer@1.1.4
+npm info linkStuff is-dotfile@1.0.2
+npm info linkStuff is-extendable@0.1.1
+npm info linkStuff is-extglob@1.0.0
+npm info linkStuff extglob@0.3.2
+npm info linkStuff is-glob@2.0.1
+npm info linkStuff glob-parent@2.0.0
+npm info linkStuff glob-base@0.3.0
+npm info linkStuff is-npm@1.0.0
+npm info linkStuff is-posix-bracket@0.1.1
+npm info linkStuff expand-brackets@0.1.5
+npm info linkStuff is-primitive@2.0.0
+npm info linkStuff is-equal-shallow@0.1.3
+npm info linkStuff is-redirect@1.0.0
+npm info linkStuff is-stream@1.1.0
+npm info linkStuff isarray@1.0.0
+npm info linkStuff isobject@2.1.0
+npm info linkStuff kind-of@3.1.0
+npm info linkStuff is-number@2.1.0
+npm info linkStuff lodash._basecopy@3.0.1
+npm info linkStuff lodash._bindcallback@3.0.1
+npm info linkStuff lodash._getnative@3.9.1
+npm info linkStuff lodash._isiterateecall@3.0.9
+npm info linkStuff lodash.isarguments@3.1.0
+npm info linkStuff lodash.isarray@3.0.4
+npm info linkStuff lodash.keys@3.1.2
+npm info linkStuff lodash._baseassign@3.2.0
+npm info linkStuff lodash.restparam@3.6.1
+npm info linkStuff lodash._createassigner@3.1.1
+npm info linkStuff lodash.assign@3.2.0
+npm info linkStuff lodash.defaults@3.1.2
+npm info linkStuff lowercase-keys@1.0.0
+npm info linkStuff map-stream@0.1.0
+npm info linkStuff minimatch@3.0.3
+npm info linkStuff minimist@0.0.8
+npm info linkStuff mkdirp@0.5.1
+npm info linkStuff ms@0.7.2
+npm info linkStuff debug@2.6.1
+npm info linkStuff nested-error-stacks@1.0.2
+npm info linkStuff nopt@1.0.10
+npm info linkStuff normalize-path@2.0.1
+npm info linkStuff number-is-nan@1.0.1
+npm info linkStuff is-finite@1.0.2
+npm info linkStuff object-assign@4.1.1
+npm info linkStuff object.omit@2.0.1
+npm info linkStuff os-homedir@1.0.2
+npm info linkStuff os-tmpdir@1.0.2
+npm info linkStuff osenv@0.1.4
+npm info linkStuff parse-glob@3.0.4
+npm info linkStuff path-is-absolute@1.0.1
+npm info linkStuff pinkie@2.0.4
+npm info linkStuff pinkie-promise@2.0.1
+npm info linkStuff prepend-http@1.0.4
+npm info linkStuff preserve@0.2.0
+npm info linkStuff process-nextick-args@1.0.7
+npm info linkStuff randomatic@1.1.6
+npm info linkStuff minimist@1.2.0
+npm info linkStuff regex-cache@0.4.3
+npm info linkStuff repeat-element@1.1.2
+npm info linkStuff repeat-string@1.6.1
+npm info linkStuff fill-range@2.2.3
+npm info linkStuff expand-range@1.8.2
+npm info linkStuff braces@1.8.5
+npm info linkStuff micromatch@2.3.11
+npm info linkStuff anymatch@1.3.0
+npm info linkStuff repeating@1.1.3
+npm info linkStuff semver@5.3.0
+npm info linkStuff semver-diff@2.1.0
+npm info linkStuff set-immediate-shim@1.0.1
+npm info linkStuff slide@1.1.6
+npm info linkStuff stream-combiner@0.0.4
+npm info linkStuff stream-shift@1.0.0
+npm info linkStuff string_decoder@0.10.31
+npm info linkStuff strip-ansi@3.0.1
+npm info linkStuff string-length@1.0.1
+npm info linkStuff strip-json-comments@2.0.1
+npm info linkStuff rc@1.1.7
+npm info linkStuff registry-url@3.1.0
+npm info linkStuff supports-color@2.0.0
+npm info linkStuff chalk@1.1.3
+npm info linkStuff through@2.3.8
+npm info linkStuff split@0.3.3
+npm info linkStuff pause-stream@0.0.11
+npm info linkStuff event-stream@3.3.4
+npm info linkStuff ps-tree@1.1.0
+npm info linkStuff timed-out@2.0.0
+npm info linkStuff touch@1.0.0
+npm info linkStuff undefsafe@0.0.3
+npm info linkStuff util-deprecate@1.0.2
+npm info linkStuff readable-stream@2.2.3
+npm info linkStuff readdirp@2.1.0
+npm info linkStuff chokidar@1.6.1
+npm info linkStuff read-all-stream@3.1.0
+npm info linkStuff uuid@2.0.3
+npm info linkStuff wrappy@1.0.2
+npm info linkStuff once@1.3.3
+npm info linkStuff end-of-stream@1.0.0
+npm info linkStuff duplexify@3.5.0
+npm info linkStuff got@3.3.1
+npm info linkStuff package-json@1.2.0
+npm info linkStuff latest-version@1.0.1
+npm info linkStuff write-file-atomic@1.3.1
+npm info linkStuff xdg-basedir@2.0.0
+npm info linkStuff configstore@1.4.0
+npm info linkStuff update-notifier@0.5.0
+npm info linkStuff nodemon@1.11.0
+/usr/local/bin/nodemon -> /usr/local/lib/node_modules/nodemon/bin/nodemon.js
+npm info lifecycle abbrev@1.1.0~install: abbrev@1.1.0
+npm info lifecycle ansi-regex@2.1.1~install: ansi-regex@2.1.1
+npm info lifecycle ansi-styles@2.2.1~install: ansi-styles@2.2.1
+npm info lifecycle arr-flatten@1.0.1~install: arr-flatten@1.0.1
+npm info lifecycle arr-diff@2.0.0~install: arr-diff@2.0.0
+npm info lifecycle array-unique@0.2.1~install: array-unique@0.2.1
+npm info lifecycle arrify@1.0.1~install: arrify@1.0.1
+npm info lifecycle async-each@1.0.1~install: async-each@1.0.1
+npm info lifecycle balanced-match@0.4.2~install: balanced-match@0.4.2
+npm info lifecycle binary-extensions@1.8.0~install: binary-extensions@1.8.0
+npm info lifecycle buffer-shims@1.0.0~install: buffer-shims@1.0.0
+npm info lifecycle concat-map@0.0.1~install: concat-map@0.0.1
+npm info lifecycle brace-expansion@1.1.6~install: brace-expansion@1.1.6
+npm info lifecycle core-util-is@1.0.2~install: core-util-is@1.0.2
+npm info lifecycle deep-extend@0.4.1~install: deep-extend@0.4.1
+npm info lifecycle duplexer@0.1.1~install: duplexer@0.1.1
+npm info lifecycle es6-promise@3.3.1~install: es6-promise@3.3.1
+npm info lifecycle escape-string-regexp@1.0.5~install: escape-string-regexp@1.0.5
+npm info lifecycle filename-regex@2.0.0~install: filename-regex@2.0.0
+npm info lifecycle for-in@1.0.2~install: for-in@1.0.2
+npm info lifecycle for-own@0.1.5~install: for-own@0.1.5
+npm info lifecycle from@0.1.3~install: from@0.1.3
+npm info lifecycle object-assign@3.0.0~install: object-assign@3.0.0
+npm info lifecycle graceful-fs@4.1.11~install: graceful-fs@4.1.11
+npm info lifecycle has-ansi@2.0.0~install: has-ansi@2.0.0
+npm info lifecycle ignore-by-default@1.0.1~install: ignore-by-default@1.0.1
+npm info lifecycle imurmurhash@0.1.4~install: imurmurhash@0.1.4
+npm info lifecycle infinity-agent@2.0.3~install: infinity-agent@2.0.3
+npm info lifecycle inherits@2.0.3~install: inherits@2.0.3
+npm info lifecycle ini@1.3.4~install: ini@1.3.4
+npm info lifecycle is-binary-path@1.0.1~install: is-binary-path@1.0.1
+npm info lifecycle is-buffer@1.1.4~install: is-buffer@1.1.4
+npm info lifecycle is-dotfile@1.0.2~install: is-dotfile@1.0.2
+npm info lifecycle is-extendable@0.1.1~install: is-extendable@0.1.1
+npm info lifecycle is-extglob@1.0.0~install: is-extglob@1.0.0
+npm info lifecycle extglob@0.3.2~install: extglob@0.3.2
+npm info lifecycle is-glob@2.0.1~install: is-glob@2.0.1
+npm info lifecycle glob-parent@2.0.0~install: glob-parent@2.0.0
+npm info lifecycle glob-base@0.3.0~install: glob-base@0.3.0
+npm info lifecycle is-npm@1.0.0~install: is-npm@1.0.0
+npm info lifecycle is-posix-bracket@0.1.1~install: is-posix-bracket@0.1.1
+npm info lifecycle expand-brackets@0.1.5~install: expand-brackets@0.1.5
+npm info lifecycle is-primitive@2.0.0~install: is-primitive@2.0.0
+npm info lifecycle is-equal-shallow@0.1.3~install: is-equal-shallow@0.1.3
+npm info lifecycle is-redirect@1.0.0~install: is-redirect@1.0.0
+npm info lifecycle is-stream@1.1.0~install: is-stream@1.1.0
+npm info lifecycle isarray@1.0.0~install: isarray@1.0.0
+npm info lifecycle isobject@2.1.0~install: isobject@2.1.0
+npm info lifecycle kind-of@3.1.0~install: kind-of@3.1.0
+npm info lifecycle is-number@2.1.0~install: is-number@2.1.0
+npm info lifecycle lodash._basecopy@3.0.1~install: lodash._basecopy@3.0.1
+npm info lifecycle lodash._bindcallback@3.0.1~install: lodash._bindcallback@3.0.1
+npm info lifecycle lodash._getnative@3.9.1~install: lodash._getnative@3.9.1
+npm info lifecycle lodash._isiterateecall@3.0.9~install: lodash._isiterateecall@3.0.9
+npm info lifecycle lodash.isarguments@3.1.0~install: lodash.isarguments@3.1.0
+npm info lifecycle lodash.isarray@3.0.4~install: lodash.isarray@3.0.4
+npm info lifecycle lodash.keys@3.1.2~install: lodash.keys@3.1.2
+npm info lifecycle lodash._baseassign@3.2.0~install: lodash._baseassign@3.2.0
+npm info lifecycle lodash.restparam@3.6.1~install: lodash.restparam@3.6.1
+npm info lifecycle lodash._createassigner@3.1.1~install: lodash._createassigner@3.1.1
+npm info lifecycle lodash.assign@3.2.0~install: lodash.assign@3.2.0
+npm info lifecycle lodash.defaults@3.1.2~install: lodash.defaults@3.1.2
+npm info lifecycle lowercase-keys@1.0.0~install: lowercase-keys@1.0.0
+npm info lifecycle map-stream@0.1.0~install: map-stream@0.1.0
+npm info lifecycle minimatch@3.0.3~install: minimatch@3.0.3
+npm info lifecycle minimist@0.0.8~install: minimist@0.0.8
+npm info lifecycle mkdirp@0.5.1~install: mkdirp@0.5.1
+npm info lifecycle ms@0.7.2~install: ms@0.7.2
+npm info lifecycle debug@2.6.1~install: debug@2.6.1
+npm info lifecycle nested-error-stacks@1.0.2~install: nested-error-stacks@1.0.2
+npm info lifecycle nopt@1.0.10~install: nopt@1.0.10
+npm info lifecycle normalize-path@2.0.1~install: normalize-path@2.0.1
+npm info lifecycle number-is-nan@1.0.1~install: number-is-nan@1.0.1
+npm info lifecycle is-finite@1.0.2~install: is-finite@1.0.2
+npm info lifecycle object-assign@4.1.1~install: object-assign@4.1.1
+npm info lifecycle object.omit@2.0.1~install: object.omit@2.0.1
+npm info lifecycle os-homedir@1.0.2~install: os-homedir@1.0.2
+npm info lifecycle os-tmpdir@1.0.2~install: os-tmpdir@1.0.2
+npm info lifecycle osenv@0.1.4~install: osenv@0.1.4
+npm info lifecycle parse-glob@3.0.4~install: parse-glob@3.0.4
+npm info lifecycle path-is-absolute@1.0.1~install: path-is-absolute@1.0.1
+npm info lifecycle pinkie@2.0.4~install: pinkie@2.0.4
+npm info lifecycle pinkie-promise@2.0.1~install: pinkie-promise@2.0.1
+npm info lifecycle prepend-http@1.0.4~install: prepend-http@1.0.4
+npm info lifecycle preserve@0.2.0~install: preserve@0.2.0
+npm info lifecycle process-nextick-args@1.0.7~install: process-nextick-args@1.0.7
+npm info lifecycle randomatic@1.1.6~install: randomatic@1.1.6
+npm info lifecycle minimist@1.2.0~install: minimist@1.2.0
+npm info lifecycle regex-cache@0.4.3~install: regex-cache@0.4.3
+npm info lifecycle repeat-element@1.1.2~install: repeat-element@1.1.2
+npm info lifecycle repeat-string@1.6.1~install: repeat-string@1.6.1
+npm info lifecycle fill-range@2.2.3~install: fill-range@2.2.3
+npm info lifecycle expand-range@1.8.2~install: expand-range@1.8.2
+npm info lifecycle braces@1.8.5~install: braces@1.8.5
+npm info lifecycle micromatch@2.3.11~install: micromatch@2.3.11
+npm info lifecycle anymatch@1.3.0~install: anymatch@1.3.0
+npm info lifecycle repeating@1.1.3~install: repeating@1.1.3
+npm info lifecycle semver@5.3.0~install: semver@5.3.0
+npm info lifecycle semver-diff@2.1.0~install: semver-diff@2.1.0
+npm info lifecycle set-immediate-shim@1.0.1~install: set-immediate-shim@1.0.1
+npm info lifecycle slide@1.1.6~install: slide@1.1.6
+npm info lifecycle stream-combiner@0.0.4~install: stream-combiner@0.0.4
+npm info lifecycle stream-shift@1.0.0~install: stream-shift@1.0.0
+npm info lifecycle string_decoder@0.10.31~install: string_decoder@0.10.31
+npm info lifecycle strip-ansi@3.0.1~install: strip-ansi@3.0.1
+npm info lifecycle string-length@1.0.1~install: string-length@1.0.1
+npm info lifecycle strip-json-comments@2.0.1~install: strip-json-comments@2.0.1
+npm info lifecycle rc@1.1.7~install: rc@1.1.7
+npm info lifecycle registry-url@3.1.0~install: registry-url@3.1.0
+npm info lifecycle supports-color@2.0.0~install: supports-color@2.0.0
+npm info lifecycle chalk@1.1.3~install: chalk@1.1.3
+npm info lifecycle through@2.3.8~install: through@2.3.8
+npm info lifecycle split@0.3.3~install: split@0.3.3
+npm info lifecycle pause-stream@0.0.11~install: pause-stream@0.0.11
+npm info lifecycle event-stream@3.3.4~install: event-stream@3.3.4
+npm info lifecycle ps-tree@1.1.0~install: ps-tree@1.1.0
+npm info lifecycle timed-out@2.0.0~install: timed-out@2.0.0
+npm info lifecycle touch@1.0.0~install: touch@1.0.0
+npm info lifecycle undefsafe@0.0.3~install: undefsafe@0.0.3
+npm info lifecycle util-deprecate@1.0.2~install: util-deprecate@1.0.2
+npm info lifecycle readable-stream@2.2.3~install: readable-stream@2.2.3
+npm info lifecycle readdirp@2.1.0~install: readdirp@2.1.0
+npm info lifecycle chokidar@1.6.1~install: chokidar@1.6.1
+npm info lifecycle read-all-stream@3.1.0~install: read-all-stream@3.1.0
+npm info lifecycle uuid@2.0.3~install: uuid@2.0.3
+npm info lifecycle wrappy@1.0.2~install: wrappy@1.0.2
+npm info lifecycle once@1.3.3~install: once@1.3.3
+npm info lifecycle end-of-stream@1.0.0~install: end-of-stream@1.0.0
+npm info lifecycle duplexify@3.5.0~install: duplexify@3.5.0
+npm info lifecycle got@3.3.1~install: got@3.3.1
+npm info lifecycle package-json@1.2.0~install: package-json@1.2.0
+npm info lifecycle latest-version@1.0.1~install: latest-version@1.0.1
+npm info lifecycle write-file-atomic@1.3.1~install: write-file-atomic@1.3.1
+npm info lifecycle xdg-basedir@2.0.0~install: xdg-basedir@2.0.0
+npm info lifecycle configstore@1.4.0~install: configstore@1.4.0
+npm info lifecycle update-notifier@0.5.0~install: update-notifier@0.5.0
+npm info lifecycle nodemon@1.11.0~install: nodemon@1.11.0
+npm info lifecycle abbrev@1.1.0~postinstall: abbrev@1.1.0
+npm info lifecycle ansi-regex@2.1.1~postinstall: ansi-regex@2.1.1
+npm info lifecycle ansi-styles@2.2.1~postinstall: ansi-styles@2.2.1
+npm info lifecycle arr-flatten@1.0.1~postinstall: arr-flatten@1.0.1
+npm info lifecycle arr-diff@2.0.0~postinstall: arr-diff@2.0.0
+npm info lifecycle array-unique@0.2.1~postinstall: array-unique@0.2.1
+npm info lifecycle arrify@1.0.1~postinstall: arrify@1.0.1
+npm info lifecycle async-each@1.0.1~postinstall: async-each@1.0.1
+npm info lifecycle balanced-match@0.4.2~postinstall: balanced-match@0.4.2
+npm info lifecycle binary-extensions@1.8.0~postinstall: binary-extensions@1.8.0
+npm info lifecycle buffer-shims@1.0.0~postinstall: buffer-shims@1.0.0
+npm info lifecycle concat-map@0.0.1~postinstall: concat-map@0.0.1
+npm info lifecycle brace-expansion@1.1.6~postinstall: brace-expansion@1.1.6
+npm info lifecycle core-util-is@1.0.2~postinstall: core-util-is@1.0.2
+npm info lifecycle deep-extend@0.4.1~postinstall: deep-extend@0.4.1
+npm info lifecycle duplexer@0.1.1~postinstall: duplexer@0.1.1
+npm info lifecycle es6-promise@3.3.1~postinstall: es6-promise@3.3.1
+npm info lifecycle escape-string-regexp@1.0.5~postinstall: escape-string-regexp@1.0.5
+npm info lifecycle filename-regex@2.0.0~postinstall: filename-regex@2.0.0
+npm info lifecycle for-in@1.0.2~postinstall: for-in@1.0.2
+npm info lifecycle for-own@0.1.5~postinstall: for-own@0.1.5
+npm info lifecycle from@0.1.3~postinstall: from@0.1.3
+npm info lifecycle object-assign@3.0.0~postinstall: object-assign@3.0.0
+npm info lifecycle graceful-fs@4.1.11~postinstall: graceful-fs@4.1.11
+npm info lifecycle has-ansi@2.0.0~postinstall: has-ansi@2.0.0
+npm info lifecycle ignore-by-default@1.0.1~postinstall: ignore-by-default@1.0.1
+npm info lifecycle imurmurhash@0.1.4~postinstall: imurmurhash@0.1.4
+npm info lifecycle infinity-agent@2.0.3~postinstall: infinity-agent@2.0.3
+npm info lifecycle inherits@2.0.3~postinstall: inherits@2.0.3
+npm info lifecycle ini@1.3.4~postinstall: ini@1.3.4
+npm info lifecycle is-binary-path@1.0.1~postinstall: is-binary-path@1.0.1
+npm info lifecycle is-buffer@1.1.4~postinstall: is-buffer@1.1.4
+npm info lifecycle is-dotfile@1.0.2~postinstall: is-dotfile@1.0.2
+npm info lifecycle is-extendable@0.1.1~postinstall: is-extendable@0.1.1
+npm info lifecycle is-extglob@1.0.0~postinstall: is-extglob@1.0.0
+npm info lifecycle extglob@0.3.2~postinstall: extglob@0.3.2
+npm info lifecycle is-glob@2.0.1~postinstall: is-glob@2.0.1
+npm info lifecycle glob-parent@2.0.0~postinstall: glob-parent@2.0.0
+npm info lifecycle glob-base@0.3.0~postinstall: glob-base@0.3.0
+npm info lifecycle is-npm@1.0.0~postinstall: is-npm@1.0.0
+npm info lifecycle is-posix-bracket@0.1.1~postinstall: is-posix-bracket@0.1.1
+npm info lifecycle expand-brackets@0.1.5~postinstall: expand-brackets@0.1.5
+npm info lifecycle is-primitive@2.0.0~postinstall: is-primitive@2.0.0
+npm info lifecycle is-equal-shallow@0.1.3~postinstall: is-equal-shallow@0.1.3
+npm info lifecycle is-redirect@1.0.0~postinstall: is-redirect@1.0.0
+npm info lifecycle is-stream@1.1.0~postinstall: is-stream@1.1.0
+npm info lifecycle isarray@1.0.0~postinstall: isarray@1.0.0
+npm info lifecycle isobject@2.1.0~postinstall: isobject@2.1.0
+npm info lifecycle kind-of@3.1.0~postinstall: kind-of@3.1.0
+npm info lifecycle is-number@2.1.0~postinstall: is-number@2.1.0
+npm info lifecycle lodash._basecopy@3.0.1~postinstall: lodash._basecopy@3.0.1
+npm info lifecycle lodash._bindcallback@3.0.1~postinstall: lodash._bindcallback@3.0.1
+npm info lifecycle lodash._getnative@3.9.1~postinstall: lodash._getnative@3.9.1
+npm info lifecycle lodash._isiterateecall@3.0.9~postinstall: lodash._isiterateecall@3.0.9
+npm info lifecycle lodash.isarguments@3.1.0~postinstall: lodash.isarguments@3.1.0
+npm info lifecycle lodash.isarray@3.0.4~postinstall: lodash.isarray@3.0.4
+npm info lifecycle lodash.keys@3.1.2~postinstall: lodash.keys@3.1.2
+npm info lifecycle lodash._baseassign@3.2.0~postinstall: lodash._baseassign@3.2.0
+npm info lifecycle lodash.restparam@3.6.1~postinstall: lodash.restparam@3.6.1
+npm info lifecycle lodash._createassigner@3.1.1~postinstall: lodash._createassigner@3.1.1
+npm info lifecycle lodash.assign@3.2.0~postinstall: lodash.assign@3.2.0
+npm info lifecycle lodash.defaults@3.1.2~postinstall: lodash.defaults@3.1.2
+npm info lifecycle lowercase-keys@1.0.0~postinstall: lowercase-keys@1.0.0
+npm info lifecycle map-stream@0.1.0~postinstall: map-stream@0.1.0
+npm info lifecycle minimatch@3.0.3~postinstall: minimatch@3.0.3
+npm info lifecycle minimist@0.0.8~postinstall: minimist@0.0.8
+npm info lifecycle mkdirp@0.5.1~postinstall: mkdirp@0.5.1
+npm info lifecycle ms@0.7.2~postinstall: ms@0.7.2
+npm info lifecycle debug@2.6.1~postinstall: debug@2.6.1
+npm info lifecycle nested-error-stacks@1.0.2~postinstall: nested-error-stacks@1.0.2
+npm info lifecycle nopt@1.0.10~postinstall: nopt@1.0.10
+npm info lifecycle normalize-path@2.0.1~postinstall: normalize-path@2.0.1
+npm info lifecycle number-is-nan@1.0.1~postinstall: number-is-nan@1.0.1
+npm info lifecycle is-finite@1.0.2~postinstall: is-finite@1.0.2
+npm info lifecycle object-assign@4.1.1~postinstall: object-assign@4.1.1
+npm info lifecycle object.omit@2.0.1~postinstall: object.omit@2.0.1
+npm info lifecycle os-homedir@1.0.2~postinstall: os-homedir@1.0.2
+npm info lifecycle os-tmpdir@1.0.2~postinstall: os-tmpdir@1.0.2
+npm info lifecycle osenv@0.1.4~postinstall: osenv@0.1.4
+npm info lifecycle parse-glob@3.0.4~postinstall: parse-glob@3.0.4
+npm info lifecycle path-is-absolute@1.0.1~postinstall: path-is-absolute@1.0.1
+npm info lifecycle pinkie@2.0.4~postinstall: pinkie@2.0.4
+npm info lifecycle pinkie-promise@2.0.1~postinstall: pinkie-promise@2.0.1
+npm info lifecycle prepend-http@1.0.4~postinstall: prepend-http@1.0.4
+npm info lifecycle preserve@0.2.0~postinstall: preserve@0.2.0
+npm info lifecycle process-nextick-args@1.0.7~postinstall: process-nextick-args@1.0.7
+npm info lifecycle randomatic@1.1.6~postinstall: randomatic@1.1.6
+npm info lifecycle minimist@1.2.0~postinstall: minimist@1.2.0
+npm info lifecycle regex-cache@0.4.3~postinstall: regex-cache@0.4.3
+npm info lifecycle repeat-element@1.1.2~postinstall: repeat-element@1.1.2
+npm info lifecycle repeat-string@1.6.1~postinstall: repeat-string@1.6.1
+npm info lifecycle fill-range@2.2.3~postinstall: fill-range@2.2.3
+npm info lifecycle expand-range@1.8.2~postinstall: expand-range@1.8.2
+npm info lifecycle braces@1.8.5~postinstall: braces@1.8.5
+npm info lifecycle micromatch@2.3.11~postinstall: micromatch@2.3.11
+npm info lifecycle anymatch@1.3.0~postinstall: anymatch@1.3.0
+npm info lifecycle repeating@1.1.3~postinstall: repeating@1.1.3
+npm info lifecycle semver@5.3.0~postinstall: semver@5.3.0
+npm info lifecycle semver-diff@2.1.0~postinstall: semver-diff@2.1.0
+npm info lifecycle set-immediate-shim@1.0.1~postinstall: set-immediate-shim@1.0.1
+npm info lifecycle slide@1.1.6~postinstall: slide@1.1.6
+npm info lifecycle stream-combiner@0.0.4~postinstall: stream-combiner@0.0.4
+npm info lifecycle stream-shift@1.0.0~postinstall: stream-shift@1.0.0
+npm info lifecycle string_decoder@0.10.31~postinstall: string_decoder@0.10.31
+npm info lifecycle strip-ansi@3.0.1~postinstall: strip-ansi@3.0.1
+npm info lifecycle string-length@1.0.1~postinstall: string-length@1.0.1
+npm info lifecycle strip-json-comments@2.0.1~postinstall: strip-json-comments@2.0.1
+npm info lifecycle rc@1.1.7~postinstall: rc@1.1.7
+npm info lifecycle registry-url@3.1.0~postinstall: registry-url@3.1.0
+npm info lifecycle supports-color@2.0.0~postinstall: supports-color@2.0.0
+npm info lifecycle chalk@1.1.3~postinstall: chalk@1.1.3
+npm info lifecycle through@2.3.8~postinstall: through@2.3.8
+npm info lifecycle split@0.3.3~postinstall: split@0.3.3
+npm info lifecycle pause-stream@0.0.11~postinstall: pause-stream@0.0.11
+npm info lifecycle event-stream@3.3.4~postinstall: event-stream@3.3.4
+npm info lifecycle ps-tree@1.1.0~postinstall: ps-tree@1.1.0
+npm info lifecycle timed-out@2.0.0~postinstall: timed-out@2.0.0
+npm info lifecycle touch@1.0.0~postinstall: touch@1.0.0
+npm info lifecycle undefsafe@0.0.3~postinstall: undefsafe@0.0.3
+npm info lifecycle util-deprecate@1.0.2~postinstall: util-deprecate@1.0.2
+npm info lifecycle readable-stream@2.2.3~postinstall: readable-stream@2.2.3
+npm info lifecycle readdirp@2.1.0~postinstall: readdirp@2.1.0
+npm info lifecycle chokidar@1.6.1~postinstall: chokidar@1.6.1
+npm info lifecycle read-all-stream@3.1.0~postinstall: read-all-stream@3.1.0
+npm info lifecycle uuid@2.0.3~postinstall: uuid@2.0.3
+npm info lifecycle wrappy@1.0.2~postinstall: wrappy@1.0.2
+npm info lifecycle once@1.3.3~postinstall: once@1.3.3
+npm info lifecycle end-of-stream@1.0.0~postinstall: end-of-stream@1.0.0
+npm info lifecycle duplexify@3.5.0~postinstall: duplexify@3.5.0
+npm info lifecycle got@3.3.1~postinstall: got@3.3.1
+npm info lifecycle package-json@1.2.0~postinstall: package-json@1.2.0
+npm info lifecycle latest-version@1.0.1~postinstall: latest-version@1.0.1
+npm info lifecycle write-file-atomic@1.3.1~postinstall: write-file-atomic@1.3.1
+npm info lifecycle xdg-basedir@2.0.0~postinstall: xdg-basedir@2.0.0
+npm info lifecycle configstore@1.4.0~postinstall: configstore@1.4.0
+npm info lifecycle update-notifier@0.5.0~postinstall: update-notifier@0.5.0
+npm info lifecycle nodemon@1.11.0~postinstall: nodemon@1.11.0
+/usr/local/lib
+`-- nodemon@1.11.0 
+  +-- chokidar@1.6.1 
+  | +-- anymatch@1.3.0 
+  | | +-- arrify@1.0.1 
+  | | `-- micromatch@2.3.11 
+  | |   +-- arr-diff@2.0.0 
+  | |   | `-- arr-flatten@1.0.1 
+  | |   +-- array-unique@0.2.1 
+  | |   +-- braces@1.8.5 
+  | |   | +-- expand-range@1.8.2 
+  | |   | | `-- fill-range@2.2.3 
+  | |   | |   +-- is-number@2.1.0 
+  | |   | |   +-- isobject@2.1.0 
+  | |   | |   +-- randomatic@1.1.6 
+  | |   | |   `-- repeat-string@1.6.1 
+  | |   | +-- preserve@0.2.0 
+  | |   | `-- repeat-element@1.1.2 
+  | |   +-- expand-brackets@0.1.5 
+  | |   | `-- is-posix-bracket@0.1.1 
+  | |   +-- extglob@0.3.2 
+  | |   +-- filename-regex@2.0.0 
+  | |   +-- kind-of@3.1.0 
+  | |   | `-- is-buffer@1.1.4 
+  | |   +-- normalize-path@2.0.1 
+  | |   +-- object.omit@2.0.1 
+  | |   | +-- for-own@0.1.5 
+  | |   | | `-- for-in@1.0.2 
+  | |   | `-- is-extendable@0.1.1 
+  | |   +-- parse-glob@3.0.4 
+  | |   | +-- glob-base@0.3.0 
+  | |   | `-- is-dotfile@1.0.2 
+  | |   `-- regex-cache@0.4.3 
+  | |     +-- is-equal-shallow@0.1.3 
+  | |     `-- is-primitive@2.0.0 
+  | +-- async-each@1.0.1 
+  | +-- glob-parent@2.0.0 
+  | +-- inherits@2.0.3 
+  | +-- is-binary-path@1.0.1 
+  | | `-- binary-extensions@1.8.0 
+  | +-- is-glob@2.0.1 
+  | | `-- is-extglob@1.0.0 
+  | +-- path-is-absolute@1.0.1 
+  | `-- readdirp@2.1.0 
+  |   +-- graceful-fs@4.1.11 
+  |   +-- readable-stream@2.2.3 
+  |   | +-- buffer-shims@1.0.0 
+  |   | +-- core-util-is@1.0.2 
+  |   | +-- isarray@1.0.0 
+  |   | +-- process-nextick-args@1.0.7 
+  |   | +-- string_decoder@0.10.31 
+  |   | `-- util-deprecate@1.0.2 
+  |   `-- set-immediate-shim@1.0.1 
+  +-- debug@2.6.1 
+  | `-- ms@0.7.2 
+  +-- es6-promise@3.3.1 
+  +-- ignore-by-default@1.0.1 
+  +-- lodash.defaults@3.1.2 
+  | +-- lodash.assign@3.2.0 
+  | | +-- lodash._baseassign@3.2.0 
+  | | | `-- lodash._basecopy@3.0.1 
+  | | +-- lodash._createassigner@3.1.1 
+  | | | +-- lodash._bindcallback@3.0.1 
+  | | | `-- lodash._isiterateecall@3.0.9 
+  | | `-- lodash.keys@3.1.2 
+  | |   +-- lodash._getnative@3.9.1 
+  | |   +-- lodash.isarguments@3.1.0 
+  | |   `-- lodash.isarray@3.0.4 
+  | `-- lodash.restparam@3.6.1 
+  +-- minimatch@3.0.3 
+  | `-- brace-expansion@1.1.6 
+  |   +-- balanced-match@0.4.2 
+  |   `-- concat-map@0.0.1 
+  +-- ps-tree@1.1.0 
+  | `-- event-stream@3.3.4 
+  |   +-- duplexer@0.1.1 
+  |   +-- from@0.1.3 
+  |   +-- map-stream@0.1.0 
+  |   +-- pause-stream@0.0.11 
+  |   +-- split@0.3.3 
+  |   +-- stream-combiner@0.0.4 
+  |   `-- through@2.3.8 
+  +-- touch@1.0.0 
+  | `-- nopt@1.0.10 
+  |   `-- abbrev@1.1.0 
+  +-- undefsafe@0.0.3 
+  `-- update-notifier@0.5.0 
+    +-- chalk@1.1.3 
+    | +-- ansi-styles@2.2.1 
+    | +-- escape-string-regexp@1.0.5 
+    | +-- has-ansi@2.0.0 
+    | | `-- ansi-regex@2.1.1 
+    | +-- strip-ansi@3.0.1 
+    | `-- supports-color@2.0.0 
+    +-- configstore@1.4.0 
+    | +-- mkdirp@0.5.1 
+    | | `-- minimist@0.0.8 
+    | +-- object-assign@4.1.1 
+    | +-- os-tmpdir@1.0.2 
+    | +-- osenv@0.1.4 
+    | | `-- os-homedir@1.0.2 
+    | +-- uuid@2.0.3 
+    | +-- write-file-atomic@1.3.1 
+    | | +-- imurmurhash@0.1.4 
+    | | `-- slide@1.1.6 
+    | `-- xdg-basedir@2.0.0 
+    +-- is-npm@1.0.0 
+    +-- latest-version@1.0.1 
+    | `-- package-json@1.2.0 
+    |   +-- got@3.3.1 
+    |   | +-- duplexify@3.5.0 
+    |   | | +-- end-of-stream@1.0.0 
+    |   | | | `-- once@1.3.3 
+    |   | | |   `-- wrappy@1.0.2 
+    |   | | `-- stream-shift@1.0.0 
+    |   | +-- infinity-agent@2.0.3 
+    |   | +-- is-redirect@1.0.0 
+    |   | +-- is-stream@1.1.0 
+    |   | +-- lowercase-keys@1.0.0 
+    |   | +-- nested-error-stacks@1.0.2 
+    |   | +-- object-assign@3.0.0 
+    |   | +-- prepend-http@1.0.4 
+    |   | +-- read-all-stream@3.1.0 
+    |   | | `-- pinkie-promise@2.0.1 
+    |   | |   `-- pinkie@2.0.4 
+    |   | `-- timed-out@2.0.0 
+    |   `-- registry-url@3.1.0 
+    |     `-- rc@1.1.7 
+    |       +-- deep-extend@0.4.1 
+    |       +-- ini@1.3.4 
+    |       +-- minimist@1.2.0 
+    |       `-- strip-json-comments@2.0.1 
+    +-- repeating@1.1.3 
+    | `-- is-finite@1.0.2 
+    |   `-- number-is-nan@1.0.1 
+    +-- semver-diff@2.1.0 
+    | `-- semver@5.3.0 
+    `-- string-length@1.0.1 
+
+npm WARN optional Skipping failed optional dependency /nodemon/chokidar/fsevents:
+npm WARN notsup Not compatible with your operating system or architecture: fsevents@1.1.1
+npm info ok 
+ ---> 8db4e0756f83
+Removing intermediate container c9b9a5cd0c1d
+Step 4/11 : ADD package.json /app/package.json
+ ---> d3cc2da86036
+Removing intermediate container e77d72b87c93
+Step 5/11 : RUN npm config set registry http://registry.npmjs.org
+ ---> Running in 11571c304e71
+npm info it worked if it ends with ok
+npm info using npm@3.8.6
+npm info using node@v5.11.0
+npm info config set "registry" "http://registry.npmjs.org"
+npm info ok 
+ ---> 2d1daf09ca47
+Removing intermediate container 11571c304e71
+Step 6/11 : RUN npm install && npm ls
+ ---> Running in 40bea459d7f1
+npm info it worked if it ends with ok
+npm info using npm@3.8.6
+npm info using node@v5.11.0
+npm info attempt registry request try #1 at 3:48:22 PM
+npm http request GET http://registry.npmjs.org/body-parser
+npm info attempt registry request try #1 at 3:48:22 PM
+npm http request GET http://registry.npmjs.org/cookie-parser
+npm info attempt registry request try #1 at 3:48:22 PM
+npm http request GET http://registry.npmjs.org/express
+npm info attempt registry request try #1 at 3:48:22 PM
+npm http request GET http://registry.npmjs.org/method-override
+npm info attempt registry request try #1 at 3:48:22 PM
+npm http request GET http://registry.npmjs.org/async
+npm info attempt registry request try #1 at 3:48:22 PM
+npm http request GET http://registry.npmjs.org/pg
+npm info attempt registry request try #1 at 3:48:22 PM
+npm http request GET http://registry.npmjs.org/socket.io
+npm http 200 http://registry.npmjs.org/cookie-parser
+npm http 200 http://registry.npmjs.org/method-override
+npm http 200 http://registry.npmjs.org/body-parser
+npm http 200 http://registry.npmjs.org/async
+npm info retry fetch attempt 1 at 3:48:22 PM
+npm info attempt registry request try #1 at 3:48:22 PM
+npm http fetch GET http://registry.npmjs.org/method-override/-/method-override-2.3.7.tgz
+npm info retry fetch attempt 1 at 3:48:22 PM
+npm info attempt registry request try #1 at 3:48:22 PM
+npm http fetch GET http://registry.npmjs.org/cookie-parser/-/cookie-parser-1.4.3.tgz
+npm http 200 http://registry.npmjs.org/socket.io
+npm http 200 http://registry.npmjs.org/pg
+npm http fetch 200 http://registry.npmjs.org/method-override/-/method-override-2.3.7.tgz
+npm http fetch 200 http://registry.npmjs.org/cookie-parser/-/cookie-parser-1.4.3.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/body-parser/-/body-parser-1.16.1.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/async/-/async-1.5.2.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/socket.io/-/socket.io-1.7.3.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/pg/-/pg-4.5.6.tgz
+npm http fetch 200 http://registry.npmjs.org/body-parser/-/body-parser-1.16.1.tgz
+npm http 200 http://registry.npmjs.org/express
+npm http fetch 200 http://registry.npmjs.org/async/-/async-1.5.2.tgz
+npm http fetch 200 http://registry.npmjs.org/socket.io/-/socket.io-1.7.3.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/express/-/express-4.14.1.tgz
+npm http fetch 200 http://registry.npmjs.org/pg/-/pg-4.5.6.tgz
+npm http fetch 200 http://registry.npmjs.org/express/-/express-4.14.1.tgz
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/bytes
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/content-type
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/depd
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/http-errors
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/iconv-lite
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/on-finished
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/qs
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/raw-body
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/type-is
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/debug
+npm http 200 http://registry.npmjs.org/bytes
+npm http 200 http://registry.npmjs.org/content-type
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/bytes/-/bytes-2.4.0.tgz
+npm http 200 http://registry.npmjs.org/depd
+npm http 200 http://registry.npmjs.org/on-finished
+npm http 304 http://registry.npmjs.org/debug
+npm http 200 http://registry.npmjs.org/http-errors
+npm http 200 http://registry.npmjs.org/iconv-lite
+npm http 200 http://registry.npmjs.org/raw-body
+npm http 200 http://registry.npmjs.org/type-is
+npm http 200 http://registry.npmjs.org/qs
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/content-type/-/content-type-1.0.2.tgz
+npm http fetch 200 http://registry.npmjs.org/bytes/-/bytes-2.4.0.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/depd/-/depd-1.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/on-finished/-/on-finished-2.3.0.tgz
+npm http fetch 200 http://registry.npmjs.org/content-type/-/content-type-1.0.2.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/http-errors/-/http-errors-1.5.1.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/iconv-lite/-/iconv-lite-0.4.15.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/raw-body/-/raw-body-2.2.0.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/type-is/-/type-is-1.6.14.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/qs/-/qs-6.2.1.tgz
+npm http fetch 200 http://registry.npmjs.org/on-finished/-/on-finished-2.3.0.tgz
+npm http fetch 200 http://registry.npmjs.org/http-errors/-/http-errors-1.5.1.tgz
+npm http fetch 200 http://registry.npmjs.org/depd/-/depd-1.1.0.tgz
+npm http fetch 200 http://registry.npmjs.org/raw-body/-/raw-body-2.2.0.tgz
+npm http fetch 200 http://registry.npmjs.org/type-is/-/type-is-1.6.14.tgz
+npm http fetch 200 http://registry.npmjs.org/qs/-/qs-6.2.1.tgz
+npm http fetch 200 http://registry.npmjs.org/iconv-lite/-/iconv-lite-0.4.15.tgz
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/ms
+npm http 304 http://registry.npmjs.org/ms
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/setprototypeof
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/statuses
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http request GET http://registry.npmjs.org/inherits
+npm http 200 http://registry.npmjs.org/setprototypeof
+npm http 200 http://registry.npmjs.org/statuses
+npm http 304 http://registry.npmjs.org/inherits
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/setprototypeof/-/setprototypeof-1.0.2.tgz
+npm info retry fetch attempt 1 at 3:48:23 PM
+npm info attempt registry request try #1 at 3:48:23 PM
+npm http fetch GET http://registry.npmjs.org/statuses/-/statuses-1.3.1.tgz
+npm http fetch 200 http://registry.npmjs.org/setprototypeof/-/setprototypeof-1.0.2.tgz
+npm http fetch 200 http://registry.npmjs.org/statuses/-/statuses-1.3.1.tgz
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/ee-first
+npm http 200 http://registry.npmjs.org/ee-first
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz
+npm http fetch 200 http://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/unpipe
+npm http 200 http://registry.npmjs.org/unpipe
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/unpipe/-/unpipe-1.0.0.tgz
+npm http fetch 200 http://registry.npmjs.org/unpipe/-/unpipe-1.0.0.tgz
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/media-typer
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/mime-types
+npm http 200 http://registry.npmjs.org/media-typer
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/media-typer/-/media-typer-0.3.0.tgz
+npm http 200 http://registry.npmjs.org/mime-types
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/mime-types/-/mime-types-2.1.14.tgz
+npm http fetch 200 http://registry.npmjs.org/media-typer/-/media-typer-0.3.0.tgz
+npm http fetch 200 http://registry.npmjs.org/mime-types/-/mime-types-2.1.14.tgz
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/mime-db
+npm http 200 http://registry.npmjs.org/mime-db
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/mime-db/-/mime-db-1.26.0.tgz
+npm http fetch 200 http://registry.npmjs.org/mime-db/-/mime-db-1.26.0.tgz
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/cookie
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/cookie-signature
+npm http 200 http://registry.npmjs.org/cookie-signature
+npm http 200 http://registry.npmjs.org/cookie
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/cookie-signature/-/cookie-signature-1.0.6.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/cookie/-/cookie-0.3.1.tgz
+npm http fetch 200 http://registry.npmjs.org/cookie-signature/-/cookie-signature-1.0.6.tgz
+npm http fetch 200 http://registry.npmjs.org/cookie/-/cookie-0.3.1.tgz
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/accepts
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/array-flatten
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/content-disposition
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/encodeurl
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/escape-html
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/etag
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/finalhandler
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/fresh
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/merge-descriptors
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/methods
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/parseurl
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/path-to-regexp
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/proxy-addr
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/range-parser
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/send
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/serve-static
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/utils-merge
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http request GET http://registry.npmjs.org/vary
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/qs/-/qs-6.2.0.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/debug/-/debug-2.2.0.tgz
+npm http 200 http://registry.npmjs.org/accepts
+npm http 200 http://registry.npmjs.org/array-flatten
+npm http 200 http://registry.npmjs.org/encodeurl
+npm http 200 http://registry.npmjs.org/escape-html
+npm http 200 http://registry.npmjs.org/content-disposition
+npm http 200 http://registry.npmjs.org/merge-descriptors
+npm http 200 http://registry.npmjs.org/methods
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/accepts/-/accepts-1.3.3.tgz
+npm http 200 http://registry.npmjs.org/etag
+npm http 200 http://registry.npmjs.org/finalhandler
+npm http 200 http://registry.npmjs.org/parseurl
+npm http 200 http://registry.npmjs.org/fresh
+npm http 200 http://registry.npmjs.org/proxy-addr
+npm http 200 http://registry.npmjs.org/range-parser
+npm http 200 http://registry.npmjs.org/path-to-regexp
+npm http 200 http://registry.npmjs.org/utils-merge
+npm http fetch 200 http://registry.npmjs.org/accepts/-/accepts-1.3.3.tgz
+npm http 200 http://registry.npmjs.org/vary
+npm http fetch 200 http://registry.npmjs.org/debug/-/debug-2.2.0.tgz
+npm http 200 http://registry.npmjs.org/send
+npm http fetch 200 http://registry.npmjs.org/qs/-/qs-6.2.0.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/array-flatten/-/array-flatten-1.1.1.tgz
+npm http 200 http://registry.npmjs.org/serve-static
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/encodeurl/-/encodeurl-1.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/escape-html/-/escape-html-1.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/content-disposition/-/content-disposition-0.5.2.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/merge-descriptors/-/merge-descriptors-1.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/methods/-/methods-1.1.2.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/etag/-/etag-1.7.0.tgz
+npm http fetch 200 http://registry.npmjs.org/array-flatten/-/array-flatten-1.1.1.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/finalhandler/-/finalhandler-0.5.1.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/parseurl/-/parseurl-1.3.1.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/fresh/-/fresh-0.3.0.tgz
+npm http fetch 200 http://registry.npmjs.org/encodeurl/-/encodeurl-1.0.1.tgz
+npm http fetch 200 http://registry.npmjs.org/escape-html/-/escape-html-1.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/proxy-addr/-/proxy-addr-1.1.3.tgz
+npm http fetch 200 http://registry.npmjs.org/content-disposition/-/content-disposition-0.5.2.tgz
+npm http fetch 200 http://registry.npmjs.org/merge-descriptors/-/merge-descriptors-1.0.1.tgz
+npm http fetch 200 http://registry.npmjs.org/methods/-/methods-1.1.2.tgz
+npm http fetch 200 http://registry.npmjs.org/etag/-/etag-1.7.0.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/range-parser/-/range-parser-1.2.0.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/path-to-regexp/-/path-to-regexp-0.1.7.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/utils-merge/-/utils-merge-1.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/vary/-/vary-1.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/send/-/send-0.14.2.tgz
+npm http fetch 200 http://registry.npmjs.org/finalhandler/-/finalhandler-0.5.1.tgz
+npm info retry fetch attempt 1 at 3:48:24 PM
+npm info attempt registry request try #1 at 3:48:24 PM
+npm http fetch GET http://registry.npmjs.org/serve-static/-/serve-static-1.11.2.tgz
+npm http fetch 200 http://registry.npmjs.org/fresh/-/fresh-0.3.0.tgz
+npm http fetch 200 http://registry.npmjs.org/parseurl/-/parseurl-1.3.1.tgz
+npm http fetch 200 http://registry.npmjs.org/proxy-addr/-/proxy-addr-1.1.3.tgz
+npm http fetch 200 http://registry.npmjs.org/range-parser/-/range-parser-1.2.0.tgz
+npm http fetch 200 http://registry.npmjs.org/utils-merge/-/utils-merge-1.0.0.tgz
+npm http fetch 200 http://registry.npmjs.org/path-to-regexp/-/path-to-regexp-0.1.7.tgz
+npm http fetch 200 http://registry.npmjs.org/vary/-/vary-1.1.0.tgz
+npm http fetch 200 http://registry.npmjs.org/send/-/send-0.14.2.tgz
+npm http fetch 200 http://registry.npmjs.org/serve-static/-/serve-static-1.11.2.tgz
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/negotiator
+npm http 200 http://registry.npmjs.org/negotiator
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/negotiator/-/negotiator-0.6.1.tgz
+npm http fetch 200 http://registry.npmjs.org/negotiator/-/negotiator-0.6.1.tgz
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/ms/-/ms-0.7.1.tgz
+npm http fetch 200 http://registry.npmjs.org/ms/-/ms-0.7.1.tgz
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/forwarded
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/ipaddr.js
+npm http 200 http://registry.npmjs.org/forwarded
+npm http 200 http://registry.npmjs.org/ipaddr.js
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/forwarded/-/forwarded-0.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/ipaddr.js/-/ipaddr.js-1.2.0.tgz
+npm http fetch 200 http://registry.npmjs.org/forwarded/-/forwarded-0.1.0.tgz
+npm http fetch 200 http://registry.npmjs.org/ipaddr.js/-/ipaddr.js-1.2.0.tgz
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/destroy
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/mime
+npm http 200 http://registry.npmjs.org/destroy
+npm http 200 http://registry.npmjs.org/mime
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/destroy/-/destroy-1.0.4.tgz
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/mime/-/mime-1.3.4.tgz
+npm http fetch 200 http://registry.npmjs.org/destroy/-/destroy-1.0.4.tgz
+npm http fetch 200 http://registry.npmjs.org/mime/-/mime-1.3.4.tgz
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/debug/-/debug-2.3.3.tgz
+npm http fetch 200 http://registry.npmjs.org/debug/-/debug-2.3.3.tgz
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/buffer-writer
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/generic-pool
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/packet-reader
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/pg-connection-string
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/pg-types
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/pgpass
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/semver
+npm http 200 http://registry.npmjs.org/buffer-writer
+npm http 200 http://registry.npmjs.org/packet-reader
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/buffer-writer/-/buffer-writer-1.0.1.tgz
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/packet-reader/-/packet-reader-0.2.0.tgz
+npm http 304 http://registry.npmjs.org/semver
+npm http 200 http://registry.npmjs.org/pg-connection-string
+npm http 200 http://registry.npmjs.org/pgpass
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/semver/-/semver-4.3.6.tgz
+npm http 200 http://registry.npmjs.org/pg-types
+npm http 200 http://registry.npmjs.org/generic-pool
+npm http fetch 200 http://registry.npmjs.org/packet-reader/-/packet-reader-0.2.0.tgz
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/pg-connection-string/-/pg-connection-string-0.1.3.tgz
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/pgpass/-/pgpass-0.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/pg-types/-/pg-types-1.11.0.tgz
+npm info retry fetch attempt 1 at 3:48:25 PM
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http fetch GET http://registry.npmjs.org/generic-pool/-/generic-pool-2.4.2.tgz
+npm http fetch 200 http://registry.npmjs.org/pg-connection-string/-/pg-connection-string-0.1.3.tgz
+npm http fetch 200 http://registry.npmjs.org/pg-types/-/pg-types-1.11.0.tgz
+npm http fetch 200 http://registry.npmjs.org/buffer-writer/-/buffer-writer-1.0.1.tgz
+npm http fetch 200 http://registry.npmjs.org/pgpass/-/pgpass-0.0.3.tgz
+npm http fetch 200 http://registry.npmjs.org/generic-pool/-/generic-pool-2.4.2.tgz
+npm http fetch 200 http://registry.npmjs.org/semver/-/semver-4.3.6.tgz
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/ap
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/postgres-array
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/postgres-bytea
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/postgres-date
+npm info attempt registry request try #1 at 3:48:25 PM
+npm http request GET http://registry.npmjs.org/postgres-interval
+npm http 200 http://registry.npmjs.org/postgres-date
+npm http 200 http://registry.npmjs.org/postgres-array
+npm http 200 http://registry.npmjs.org/postgres-bytea
+npm http 200 http://registry.npmjs.org/ap
+npm http 200 http://registry.npmjs.org/postgres-interval
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/postgres-date/-/postgres-date-1.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/postgres-array/-/postgres-array-1.0.2.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/postgres-bytea/-/postgres-bytea-1.0.0.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/ap/-/ap-0.2.0.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/postgres-interval/-/postgres-interval-1.0.2.tgz
+npm http fetch 200 http://registry.npmjs.org/postgres-date/-/postgres-date-1.0.3.tgz
+npm http fetch 200 http://registry.npmjs.org/postgres-array/-/postgres-array-1.0.2.tgz
+npm http fetch 200 http://registry.npmjs.org/postgres-bytea/-/postgres-bytea-1.0.0.tgz
+npm http fetch 200 http://registry.npmjs.org/postgres-interval/-/postgres-interval-1.0.2.tgz
+npm http fetch 200 http://registry.npmjs.org/ap/-/ap-0.2.0.tgz
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/xtend
+npm http 200 http://registry.npmjs.org/xtend
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/xtend/-/xtend-4.0.1.tgz
+npm http fetch 200 http://registry.npmjs.org/xtend/-/xtend-4.0.1.tgz
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/split
+npm http 304 http://registry.npmjs.org/split
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/through
+npm http 304 http://registry.npmjs.org/through
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/engine.io
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/has-binary
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/socket.io-adapter
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/socket.io-client
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/socket.io-parser
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/object-assign
+npm http 304 http://registry.npmjs.org/object-assign
+npm http 200 http://registry.npmjs.org/has-binary
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/object-assign/-/object-assign-4.1.0.tgz
+npm http 200 http://registry.npmjs.org/socket.io-adapter
+npm http 200 http://registry.npmjs.org/socket.io-parser
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/has-binary/-/has-binary-0.1.7.tgz
+npm http 200 http://registry.npmjs.org/socket.io-client
+npm http 200 http://registry.npmjs.org/engine.io
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/socket.io-adapter/-/socket.io-adapter-0.5.0.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/socket.io-parser/-/socket.io-parser-2.3.1.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/socket.io-client/-/socket.io-client-1.7.3.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/engine.io/-/engine.io-1.8.3.tgz
+npm http fetch 200 http://registry.npmjs.org/object-assign/-/object-assign-4.1.0.tgz
+npm http fetch 200 http://registry.npmjs.org/has-binary/-/has-binary-0.1.7.tgz
+npm http fetch 200 http://registry.npmjs.org/socket.io-adapter/-/socket.io-adapter-0.5.0.tgz
+npm http fetch 200 http://registry.npmjs.org/socket.io-parser/-/socket.io-parser-2.3.1.tgz
+npm http fetch 200 http://registry.npmjs.org/socket.io-client/-/socket.io-client-1.7.3.tgz
+npm http fetch 200 http://registry.npmjs.org/engine.io/-/engine.io-1.8.3.tgz
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/base64id
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/engine.io-parser
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/ws
+npm http 200 http://registry.npmjs.org/base64id
+npm http 200 http://registry.npmjs.org/engine.io-parser
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/base64id/-/base64id-1.0.0.tgz
+npm http 200 http://registry.npmjs.org/ws
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/engine.io-parser/-/engine.io-parser-1.3.2.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/ws/-/ws-1.1.2.tgz
+npm http fetch 200 http://registry.npmjs.org/base64id/-/base64id-1.0.0.tgz
+npm http fetch 200 http://registry.npmjs.org/engine.io-parser/-/engine.io-parser-1.3.2.tgz
+npm http fetch 200 http://registry.npmjs.org/ws/-/ws-1.1.2.tgz
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/after
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/arraybuffer.slice
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/base64-arraybuffer
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/blob
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/wtf-8
+npm http 200 http://registry.npmjs.org/base64-arraybuffer
+npm http 200 http://registry.npmjs.org/after
+npm http 200 http://registry.npmjs.org/blob
+npm http 200 http://registry.npmjs.org/arraybuffer.slice
+npm http 200 http://registry.npmjs.org/wtf-8
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/base64-arraybuffer/-/base64-arraybuffer-0.1.5.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/after/-/after-0.8.2.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/blob/-/blob-0.0.4.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/arraybuffer.slice/-/arraybuffer.slice-0.0.6.tgz
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/wtf-8/-/wtf-8-1.0.0.tgz
+npm http fetch 200 http://registry.npmjs.org/base64-arraybuffer/-/base64-arraybuffer-0.1.5.tgz
+npm http fetch 200 http://registry.npmjs.org/after/-/after-0.8.2.tgz
+npm http fetch 200 http://registry.npmjs.org/wtf-8/-/wtf-8-1.0.0.tgz
+npm http fetch 200 http://registry.npmjs.org/arraybuffer.slice/-/arraybuffer.slice-0.0.6.tgz
+npm http fetch 200 http://registry.npmjs.org/blob/-/blob-0.0.4.tgz
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http request GET http://registry.npmjs.org/isarray
+npm http 304 http://registry.npmjs.org/isarray
+npm info retry fetch attempt 1 at 3:48:26 PM
+npm info attempt registry request try #1 at 3:48:26 PM
+npm http fetch GET http://registry.npmjs.org/isarray/-/isarray-0.0.1.tgz
+npm http fetch 200 http://registry.npmjs.org/isarray/-/isarray-0.0.1.tgz
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/options
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/ultron
+npm http 200 http://registry.npmjs.org/options
+npm http 200 http://registry.npmjs.org/ultron
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/options/-/options-0.0.6.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/ultron/-/ultron-1.0.2.tgz
+npm http fetch 200 http://registry.npmjs.org/options/-/options-0.0.6.tgz
+npm http fetch 200 http://registry.npmjs.org/ultron/-/ultron-1.0.2.tgz
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/json3
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/component-emitter
+npm http 200 http://registry.npmjs.org/component-emitter
+npm http 200 http://registry.npmjs.org/json3
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/component-emitter/-/component-emitter-1.1.2.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/json3/-/json3-3.3.2.tgz
+npm http fetch 200 http://registry.npmjs.org/component-emitter/-/component-emitter-1.1.2.tgz
+npm http fetch 200 http://registry.npmjs.org/json3/-/json3-3.3.2.tgz
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/backo2
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/component-bind
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/engine.io-client
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/indexof
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/object-component
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/parseuri
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/to-array
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/component-emitter/-/component-emitter-1.2.1.tgz
+npm http 200 http://registry.npmjs.org/backo2
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/backo2/-/backo2-1.0.2.tgz
+npm http 200 http://registry.npmjs.org/component-bind
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/component-bind/-/component-bind-1.0.0.tgz
+npm http 200 http://registry.npmjs.org/object-component
+npm http 200 http://registry.npmjs.org/parseuri
+npm http 200 http://registry.npmjs.org/to-array
+npm http 200 http://registry.npmjs.org/indexof
+npm http fetch 200 http://registry.npmjs.org/component-emitter/-/component-emitter-1.2.1.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/object-component/-/object-component-0.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/parseuri/-/parseuri-0.0.5.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/to-array/-/to-array-0.1.4.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/indexof/-/indexof-0.0.1.tgz
+npm http 200 http://registry.npmjs.org/engine.io-client
+npm http fetch 200 http://registry.npmjs.org/backo2/-/backo2-1.0.2.tgz
+npm http fetch 200 http://registry.npmjs.org/component-bind/-/component-bind-1.0.0.tgz
+npm http fetch 200 http://registry.npmjs.org/to-array/-/to-array-0.1.4.tgz
+npm http fetch 200 http://registry.npmjs.org/indexof/-/indexof-0.0.1.tgz
+npm http fetch 200 http://registry.npmjs.org/object-component/-/object-component-0.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/engine.io-client/-/engine.io-client-1.8.3.tgz
+npm http fetch 200 http://registry.npmjs.org/parseuri/-/parseuri-0.0.5.tgz
+npm http fetch 200 http://registry.npmjs.org/engine.io-client/-/engine.io-client-1.8.3.tgz
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/component-inherit
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/has-cors
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/parsejson
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/parseqs
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/xmlhttprequest-ssl
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/yeast
+npm http 200 http://registry.npmjs.org/component-inherit
+npm http 200 http://registry.npmjs.org/has-cors
+npm http 200 http://registry.npmjs.org/parsejson
+npm http 200 http://registry.npmjs.org/xmlhttprequest-ssl
+npm http 200 http://registry.npmjs.org/parseqs
+npm http 200 http://registry.npmjs.org/yeast
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/component-inherit/-/component-inherit-0.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/has-cors/-/has-cors-1.1.0.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/parsejson/-/parsejson-0.0.3.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/xmlhttprequest-ssl/-/xmlhttprequest-ssl-1.5.3.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/parseqs/-/parseqs-0.0.5.tgz
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/yeast/-/yeast-0.1.2.tgz
+npm http fetch 200 http://registry.npmjs.org/parsejson/-/parsejson-0.0.3.tgz
+npm http fetch 200 http://registry.npmjs.org/component-inherit/-/component-inherit-0.0.3.tgz
+npm http fetch 200 http://registry.npmjs.org/yeast/-/yeast-0.1.2.tgz
+npm http fetch 200 http://registry.npmjs.org/has-cors/-/has-cors-1.1.0.tgz
+npm http fetch 200 http://registry.npmjs.org/parseqs/-/parseqs-0.0.5.tgz
+npm http fetch 200 http://registry.npmjs.org/xmlhttprequest-ssl/-/xmlhttprequest-ssl-1.5.3.tgz
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/better-assert
+npm http 200 http://registry.npmjs.org/better-assert
+npm info retry fetch attempt 1 at 3:48:27 PM
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http fetch GET http://registry.npmjs.org/better-assert/-/better-assert-1.0.2.tgz
+npm http fetch 200 http://registry.npmjs.org/better-assert/-/better-assert-1.0.2.tgz
+npm info attempt registry request try #1 at 3:48:27 PM
+npm http request GET http://registry.npmjs.org/callsite
+npm http 200 http://registry.npmjs.org/callsite
+npm info retry fetch attempt 1 at 3:48:28 PM
+npm info attempt registry request try #1 at 3:48:28 PM
+npm http fetch GET http://registry.npmjs.org/callsite/-/callsite-1.0.0.tgz
+npm http fetch 200 http://registry.npmjs.org/callsite/-/callsite-1.0.0.tgz
+npm info lifecycle after@0.8.2~preinstall: after@0.8.2
+npm info lifecycle ap@0.2.0~preinstall: ap@0.2.0
+npm info lifecycle array-flatten@1.1.1~preinstall: array-flatten@1.1.1
+npm info lifecycle arraybuffer.slice@0.0.6~preinstall: arraybuffer.slice@0.0.6
+npm info lifecycle backo2@1.0.2~preinstall: backo2@1.0.2
+npm info lifecycle base64-arraybuffer@0.1.5~preinstall: base64-arraybuffer@0.1.5
+npm info lifecycle base64id@1.0.0~preinstall: base64id@1.0.0
+npm info lifecycle blob@0.0.4~preinstall: blob@0.0.4
+npm info lifecycle buffer-writer@1.0.1~preinstall: buffer-writer@1.0.1
+npm info lifecycle bytes@2.4.0~preinstall: bytes@2.4.0
+npm info lifecycle callsite@1.0.0~preinstall: callsite@1.0.0
+npm info lifecycle better-assert@1.0.2~preinstall: better-assert@1.0.2
+npm info lifecycle component-bind@1.0.0~preinstall: component-bind@1.0.0
+npm info lifecycle component-emitter@1.1.2~preinstall: component-emitter@1.1.2
+npm info lifecycle component-inherit@0.0.3~preinstall: component-inherit@0.0.3
+npm info lifecycle content-disposition@0.5.2~preinstall: content-disposition@0.5.2
+npm info lifecycle content-type@1.0.2~preinstall: content-type@1.0.2
+npm info lifecycle cookie@0.3.1~preinstall: cookie@0.3.1
+npm info lifecycle cookie-signature@1.0.6~preinstall: cookie-signature@1.0.6
+npm info lifecycle depd@1.1.0~preinstall: depd@1.1.0
+npm info lifecycle destroy@1.0.4~preinstall: destroy@1.0.4
+npm info lifecycle ee-first@1.1.1~preinstall: ee-first@1.1.1
+npm info lifecycle encodeurl@1.0.1~preinstall: encodeurl@1.0.1
+npm info lifecycle component-emitter@1.2.1~preinstall: component-emitter@1.2.1
+npm info lifecycle escape-html@1.0.3~preinstall: escape-html@1.0.3
+npm info lifecycle etag@1.7.0~preinstall: etag@1.7.0
+npm info lifecycle ms@0.7.1~preinstall: ms@0.7.1
+npm info lifecycle debug@2.2.0~preinstall: debug@2.2.0
+npm info lifecycle qs@6.2.0~preinstall: qs@6.2.0
+npm info lifecycle ms@0.7.1~preinstall: ms@0.7.1
+npm info lifecycle debug@2.2.0~preinstall: debug@2.2.0
+npm info lifecycle forwarded@0.1.0~preinstall: forwarded@0.1.0
+npm info lifecycle fresh@0.3.0~preinstall: fresh@0.3.0
+npm info lifecycle generic-pool@2.4.2~preinstall: generic-pool@2.4.2
+npm info lifecycle has-cors@1.1.0~preinstall: has-cors@1.1.0
+npm info lifecycle iconv-lite@0.4.15~preinstall: iconv-lite@0.4.15
+npm info lifecycle indexof@0.0.1~preinstall: indexof@0.0.1
+npm info lifecycle inherits@2.0.3~preinstall: inherits@2.0.3
+npm info lifecycle ipaddr.js@1.2.0~preinstall: ipaddr.js@1.2.0
+npm info lifecycle isarray@0.0.1~preinstall: isarray@0.0.1
+npm info lifecycle has-binary@0.1.7~preinstall: has-binary@0.1.7
+npm info lifecycle json3@3.3.2~preinstall: json3@3.3.2
+npm info lifecycle media-typer@0.3.0~preinstall: media-typer@0.3.0
+npm info lifecycle merge-descriptors@1.0.1~preinstall: merge-descriptors@1.0.1
+npm info lifecycle methods@1.1.2~preinstall: methods@1.1.2
+npm info lifecycle mime@1.3.4~preinstall: mime@1.3.4
+npm info lifecycle mime-db@1.26.0~preinstall: mime-db@1.26.0
+npm info lifecycle mime-types@2.1.14~preinstall: mime-types@2.1.14
+npm info lifecycle ms@0.7.2~preinstall: ms@0.7.2
+npm info lifecycle debug@2.3.3~preinstall: debug@2.3.3
+npm info lifecycle debug@2.3.3~preinstall: debug@2.3.3
+npm info lifecycle debug@2.3.3~preinstall: debug@2.3.3
+npm info lifecycle debug@2.6.1~preinstall: debug@2.6.1
+npm info lifecycle negotiator@0.6.1~preinstall: negotiator@0.6.1
+npm info lifecycle accepts@1.3.3~preinstall: accepts@1.3.3
+npm info lifecycle object-assign@4.1.0~preinstall: object-assign@4.1.0
+npm info lifecycle object-component@0.0.3~preinstall: object-component@0.0.3
+npm info lifecycle on-finished@2.3.0~preinstall: on-finished@2.3.0
+npm info lifecycle options@0.0.6~preinstall: options@0.0.6
+npm info lifecycle packet-reader@0.2.0~preinstall: packet-reader@0.2.0
+npm info lifecycle parsejson@0.0.3~preinstall: parsejson@0.0.3
+npm info lifecycle parseqs@0.0.5~preinstall: parseqs@0.0.5
+npm info lifecycle parseuri@0.0.5~preinstall: parseuri@0.0.5
+npm info lifecycle parseurl@1.3.1~preinstall: parseurl@1.3.1
+npm info lifecycle path-to-regexp@0.1.7~preinstall: path-to-regexp@0.1.7
+npm info lifecycle pg-connection-string@0.1.3~preinstall: pg-connection-string@0.1.3
+npm info lifecycle postgres-array@1.0.2~preinstall: postgres-array@1.0.2
+npm info lifecycle postgres-bytea@1.0.0~preinstall: postgres-bytea@1.0.0
+npm info lifecycle postgres-date@1.0.3~preinstall: postgres-date@1.0.3
+npm info lifecycle proxy-addr@1.1.3~preinstall: proxy-addr@1.1.3
+npm info lifecycle qs@6.2.1~preinstall: qs@6.2.1
+npm info lifecycle range-parser@1.2.0~preinstall: range-parser@1.2.0
+npm info lifecycle semver@4.3.6~preinstall: semver@4.3.6
+npm info lifecycle ms@0.7.1~preinstall: ms@0.7.1
+npm info lifecycle debug@2.2.0~preinstall: debug@2.2.0
+npm info lifecycle setprototypeof@1.0.2~preinstall: setprototypeof@1.0.2
+npm info lifecycle debug@2.3.3~preinstall: debug@2.3.3
+npm info lifecycle component-emitter@1.2.1~preinstall: component-emitter@1.2.1
+npm info lifecycle debug@2.3.3~preinstall: debug@2.3.3
+npm info lifecycle ms@0.7.1~preinstall: ms@0.7.1
+npm info lifecycle debug@2.2.0~preinstall: debug@2.2.0
+npm info lifecycle socket.io-parser@2.3.1~preinstall: socket.io-parser@2.3.1
+npm info lifecycle socket.io-adapter@0.5.0~preinstall: socket.io-adapter@0.5.0
+npm info lifecycle debug@2.3.3~preinstall: debug@2.3.3
+npm info lifecycle statuses@1.3.1~preinstall: statuses@1.3.1
+npm info lifecycle http-errors@1.5.1~preinstall: http-errors@1.5.1
+npm info lifecycle send@0.14.2~preinstall: send@0.14.2
+npm info lifecycle serve-static@1.11.2~preinstall: serve-static@1.11.2
+npm info lifecycle through@2.3.8~preinstall: through@2.3.8
+npm info lifecycle split@0.3.3~preinstall: split@0.3.3
+npm info lifecycle pgpass@0.0.3~preinstall: pgpass@0.0.3
+npm info lifecycle to-array@0.1.4~preinstall: to-array@0.1.4
+npm info lifecycle type-is@1.6.14~preinstall: type-is@1.6.14
+npm info lifecycle ultron@1.0.2~preinstall: ultron@1.0.2
+npm info lifecycle unpipe@1.0.0~preinstall: unpipe@1.0.0
+npm info lifecycle raw-body@2.2.0~preinstall: raw-body@2.2.0
+npm info lifecycle finalhandler@0.5.1~preinstall: finalhandler@0.5.1
+npm info lifecycle utils-merge@1.0.0~preinstall: utils-merge@1.0.0
+npm info lifecycle vary@1.1.0~preinstall: vary@1.1.0
+npm info lifecycle ws@1.1.2~preinstall: ws@1.1.2
+npm info lifecycle wtf-8@1.0.0~preinstall: wtf-8@1.0.0
+npm info lifecycle engine.io-parser@1.3.2~preinstall: engine.io-parser@1.3.2
+npm info lifecycle engine.io@1.8.3~preinstall: engine.io@1.8.3
+npm info lifecycle xmlhttprequest-ssl@1.5.3~preinstall: xmlhttprequest-ssl@1.5.3
+npm info lifecycle xtend@4.0.1~preinstall: xtend@4.0.1
+npm info lifecycle postgres-interval@1.0.2~preinstall: postgres-interval@1.0.2
+npm info lifecycle pg-types@1.11.0~preinstall: pg-types@1.11.0
+npm info lifecycle yeast@0.1.2~preinstall: yeast@0.1.2
+npm info lifecycle engine.io-client@1.8.3~preinstall: engine.io-client@1.8.3
+npm info lifecycle socket.io-client@1.7.3~preinstall: socket.io-client@1.7.3
+npm info lifecycle async@1.5.2~preinstall: async@1.5.2
+npm info lifecycle body-parser@1.16.1~preinstall: body-parser@1.16.1
+npm info lifecycle cookie-parser@1.4.3~preinstall: cookie-parser@1.4.3
+npm info lifecycle express@4.14.1~preinstall: express@4.14.1
+npm info lifecycle method-override@2.3.7~preinstall: method-override@2.3.7
+npm info lifecycle pg@4.5.6~preinstall: pg@4.5.6
+npm info lifecycle socket.io@1.7.3~preinstall: socket.io@1.7.3
+npm info linkStuff after@0.8.2
+npm info linkStuff ap@0.2.0
+npm info linkStuff array-flatten@1.1.1
+npm info linkStuff arraybuffer.slice@0.0.6
+npm info linkStuff backo2@1.0.2
+npm info linkStuff base64-arraybuffer@0.1.5
+npm info linkStuff base64id@1.0.0
+npm info linkStuff blob@0.0.4
+npm info linkStuff buffer-writer@1.0.1
+npm info linkStuff bytes@2.4.0
+npm info linkStuff callsite@1.0.0
+npm info linkStuff better-assert@1.0.2
+npm info linkStuff component-bind@1.0.0
+npm info linkStuff component-emitter@1.1.2
+npm info linkStuff component-inherit@0.0.3
+npm info linkStuff content-disposition@0.5.2
+npm info linkStuff content-type@1.0.2
+npm info linkStuff cookie@0.3.1
+npm info linkStuff cookie-signature@1.0.6
+npm info linkStuff depd@1.1.0
+npm info linkStuff destroy@1.0.4
+npm info linkStuff ee-first@1.1.1
+npm info linkStuff encodeurl@1.0.1
+npm info linkStuff component-emitter@1.2.1
+npm info linkStuff escape-html@1.0.3
+npm info linkStuff etag@1.7.0
+npm info linkStuff ms@0.7.1
+npm info linkStuff debug@2.2.0
+npm info linkStuff qs@6.2.0
+npm info linkStuff ms@0.7.1
+npm info linkStuff debug@2.2.0
+npm info linkStuff forwarded@0.1.0
+npm info linkStuff fresh@0.3.0
+npm info linkStuff generic-pool@2.4.2
+npm info linkStuff has-cors@1.1.0
+npm info linkStuff iconv-lite@0.4.15
+npm info linkStuff indexof@0.0.1
+npm info linkStuff inherits@2.0.3
+npm info linkStuff ipaddr.js@1.2.0
+npm info linkStuff isarray@0.0.1
+npm info linkStuff has-binary@0.1.7
+npm info linkStuff json3@3.3.2
+npm info linkStuff media-typer@0.3.0
+npm info linkStuff merge-descriptors@1.0.1
+npm info linkStuff methods@1.1.2
+npm info linkStuff mime@1.3.4
+npm info linkStuff mime-db@1.26.0
+npm info linkStuff mime-types@2.1.14
+npm info linkStuff ms@0.7.2
+npm info linkStuff debug@2.3.3
+npm info linkStuff debug@2.3.3
+npm info linkStuff debug@2.3.3
+npm info linkStuff debug@2.6.1
+npm info linkStuff negotiator@0.6.1
+npm info linkStuff accepts@1.3.3
+npm info linkStuff object-assign@4.1.0
+npm info linkStuff object-component@0.0.3
+npm info linkStuff on-finished@2.3.0
+npm info linkStuff options@0.0.6
+npm info linkStuff packet-reader@0.2.0
+npm info linkStuff parsejson@0.0.3
+npm info linkStuff parseqs@0.0.5
+npm info linkStuff parseuri@0.0.5
+npm info linkStuff parseurl@1.3.1
+npm info linkStuff path-to-regexp@0.1.7
+npm info linkStuff pg-connection-string@0.1.3
+npm info linkStuff postgres-array@1.0.2
+npm info linkStuff postgres-bytea@1.0.0
+npm info linkStuff postgres-date@1.0.3
+npm info linkStuff proxy-addr@1.1.3
+npm info linkStuff qs@6.2.1
+npm info linkStuff range-parser@1.2.0
+npm info linkStuff semver@4.3.6
+npm info linkStuff ms@0.7.1
+npm info linkStuff debug@2.2.0
+npm info linkStuff setprototypeof@1.0.2
+npm info linkStuff debug@2.3.3
+npm info linkStuff component-emitter@1.2.1
+npm info linkStuff debug@2.3.3
+npm info linkStuff ms@0.7.1
+npm info linkStuff debug@2.2.0
+npm info linkStuff socket.io-parser@2.3.1
+npm info linkStuff socket.io-adapter@0.5.0
+npm info linkStuff debug@2.3.3
+npm info linkStuff statuses@1.3.1
+npm info linkStuff http-errors@1.5.1
+npm info linkStuff send@0.14.2
+npm info linkStuff serve-static@1.11.2
+npm info linkStuff through@2.3.8
+npm info linkStuff split@0.3.3
+npm info linkStuff pgpass@0.0.3
+npm info linkStuff to-array@0.1.4
+npm info linkStuff type-is@1.6.14
+npm info linkStuff ultron@1.0.2
+npm info linkStuff unpipe@1.0.0
+npm info linkStuff raw-body@2.2.0
+npm info linkStuff finalhandler@0.5.1
+npm info linkStuff utils-merge@1.0.0
+npm info linkStuff vary@1.1.0
+npm info linkStuff ws@1.1.2
+npm info linkStuff wtf-8@1.0.0
+npm info linkStuff engine.io-parser@1.3.2
+npm info linkStuff engine.io@1.8.3
+npm info linkStuff xmlhttprequest-ssl@1.5.3
+npm info linkStuff xtend@4.0.1
+npm info linkStuff postgres-interval@1.0.2
+npm info linkStuff pg-types@1.11.0
+npm info linkStuff yeast@0.1.2
+npm info linkStuff engine.io-client@1.8.3
+npm info linkStuff socket.io-client@1.7.3
+npm info linkStuff async@1.5.2
+npm info linkStuff body-parser@1.16.1
+npm info linkStuff cookie-parser@1.4.3
+npm info linkStuff express@4.14.1
+npm info linkStuff method-override@2.3.7
+npm info linkStuff pg@4.5.6
+npm info linkStuff socket.io@1.7.3
+npm info lifecycle after@0.8.2~install: after@0.8.2
+npm info lifecycle ap@0.2.0~install: ap@0.2.0
+npm info lifecycle array-flatten@1.1.1~install: array-flatten@1.1.1
+npm info lifecycle arraybuffer.slice@0.0.6~install: arraybuffer.slice@0.0.6
+npm info lifecycle backo2@1.0.2~install: backo2@1.0.2
+npm info lifecycle base64-arraybuffer@0.1.5~install: base64-arraybuffer@0.1.5
+npm info lifecycle base64id@1.0.0~install: base64id@1.0.0
+npm info lifecycle blob@0.0.4~install: blob@0.0.4
+npm info lifecycle buffer-writer@1.0.1~install: buffer-writer@1.0.1
+npm info lifecycle bytes@2.4.0~install: bytes@2.4.0
+npm info lifecycle callsite@1.0.0~install: callsite@1.0.0
+npm info lifecycle better-assert@1.0.2~install: better-assert@1.0.2
+npm info lifecycle component-bind@1.0.0~install: component-bind@1.0.0
+npm info lifecycle component-emitter@1.1.2~install: component-emitter@1.1.2
+npm info lifecycle component-inherit@0.0.3~install: component-inherit@0.0.3
+npm info lifecycle content-disposition@0.5.2~install: content-disposition@0.5.2
+npm info lifecycle content-type@1.0.2~install: content-type@1.0.2
+npm info lifecycle cookie@0.3.1~install: cookie@0.3.1
+npm info lifecycle cookie-signature@1.0.6~install: cookie-signature@1.0.6
+npm info lifecycle depd@1.1.0~install: depd@1.1.0
+npm info lifecycle destroy@1.0.4~install: destroy@1.0.4
+npm info lifecycle ee-first@1.1.1~install: ee-first@1.1.1
+npm info lifecycle encodeurl@1.0.1~install: encodeurl@1.0.1
+npm info lifecycle component-emitter@1.2.1~install: component-emitter@1.2.1
+npm info lifecycle escape-html@1.0.3~install: escape-html@1.0.3
+npm info lifecycle etag@1.7.0~install: etag@1.7.0
+npm info lifecycle ms@0.7.1~install: ms@0.7.1
+npm info lifecycle debug@2.2.0~install: debug@2.2.0
+npm info lifecycle qs@6.2.0~install: qs@6.2.0
+npm info lifecycle ms@0.7.1~install: ms@0.7.1
+npm info lifecycle debug@2.2.0~install: debug@2.2.0
+npm info lifecycle forwarded@0.1.0~install: forwarded@0.1.0
+npm info lifecycle fresh@0.3.0~install: fresh@0.3.0
+npm info lifecycle generic-pool@2.4.2~install: generic-pool@2.4.2
+npm info lifecycle has-cors@1.1.0~install: has-cors@1.1.0
+npm info lifecycle iconv-lite@0.4.15~install: iconv-lite@0.4.15
+npm info lifecycle indexof@0.0.1~install: indexof@0.0.1
+npm info lifecycle inherits@2.0.3~install: inherits@2.0.3
+npm info lifecycle ipaddr.js@1.2.0~install: ipaddr.js@1.2.0
+npm info lifecycle isarray@0.0.1~install: isarray@0.0.1
+npm info lifecycle has-binary@0.1.7~install: has-binary@0.1.7
+npm info lifecycle json3@3.3.2~install: json3@3.3.2
+npm info lifecycle media-typer@0.3.0~install: media-typer@0.3.0
+npm info lifecycle merge-descriptors@1.0.1~install: merge-descriptors@1.0.1
+npm info lifecycle methods@1.1.2~install: methods@1.1.2
+npm info lifecycle mime@1.3.4~install: mime@1.3.4
+npm info lifecycle mime-db@1.26.0~install: mime-db@1.26.0
+npm info lifecycle mime-types@2.1.14~install: mime-types@2.1.14
+npm info lifecycle ms@0.7.2~install: ms@0.7.2
+npm info lifecycle debug@2.3.3~install: debug@2.3.3
+npm info lifecycle debug@2.3.3~install: debug@2.3.3
+npm info lifecycle debug@2.3.3~install: debug@2.3.3
+npm info lifecycle debug@2.6.1~install: debug@2.6.1
+npm info lifecycle negotiator@0.6.1~install: negotiator@0.6.1
+npm info lifecycle accepts@1.3.3~install: accepts@1.3.3
+npm info lifecycle object-assign@4.1.0~install: object-assign@4.1.0
+npm info lifecycle object-component@0.0.3~install: object-component@0.0.3
+npm info lifecycle on-finished@2.3.0~install: on-finished@2.3.0
+npm info lifecycle options@0.0.6~install: options@0.0.6
+npm info lifecycle packet-reader@0.2.0~install: packet-reader@0.2.0
+npm info lifecycle parsejson@0.0.3~install: parsejson@0.0.3
+npm info lifecycle parseqs@0.0.5~install: parseqs@0.0.5
+npm info lifecycle parseuri@0.0.5~install: parseuri@0.0.5
+npm info lifecycle parseurl@1.3.1~install: parseurl@1.3.1
+npm info lifecycle path-to-regexp@0.1.7~install: path-to-regexp@0.1.7
+npm info lifecycle pg-connection-string@0.1.3~install: pg-connection-string@0.1.3
+npm info lifecycle postgres-array@1.0.2~install: postgres-array@1.0.2
+npm info lifecycle postgres-bytea@1.0.0~install: postgres-bytea@1.0.0
+npm info lifecycle postgres-date@1.0.3~install: postgres-date@1.0.3
+npm info lifecycle proxy-addr@1.1.3~install: proxy-addr@1.1.3
+npm info lifecycle qs@6.2.1~install: qs@6.2.1
+npm info lifecycle range-parser@1.2.0~install: range-parser@1.2.0
+npm info lifecycle semver@4.3.6~install: semver@4.3.6
+npm info lifecycle ms@0.7.1~install: ms@0.7.1
+npm info lifecycle debug@2.2.0~install: debug@2.2.0
+npm info lifecycle setprototypeof@1.0.2~install: setprototypeof@1.0.2
+npm info lifecycle debug@2.3.3~install: debug@2.3.3
+npm info lifecycle component-emitter@1.2.1~install: component-emitter@1.2.1
+npm info lifecycle debug@2.3.3~install: debug@2.3.3
+npm info lifecycle ms@0.7.1~install: ms@0.7.1
+npm info lifecycle debug@2.2.0~install: debug@2.2.0
+npm info lifecycle socket.io-parser@2.3.1~install: socket.io-parser@2.3.1
+npm info lifecycle socket.io-adapter@0.5.0~install: socket.io-adapter@0.5.0
+npm info lifecycle debug@2.3.3~install: debug@2.3.3
+npm info lifecycle statuses@1.3.1~install: statuses@1.3.1
+npm info lifecycle http-errors@1.5.1~install: http-errors@1.5.1
+npm info lifecycle send@0.14.2~install: send@0.14.2
+npm info lifecycle serve-static@1.11.2~install: serve-static@1.11.2
+npm info lifecycle through@2.3.8~install: through@2.3.8
+npm info lifecycle split@0.3.3~install: split@0.3.3
+npm info lifecycle pgpass@0.0.3~install: pgpass@0.0.3
+npm info lifecycle to-array@0.1.4~install: to-array@0.1.4
+npm info lifecycle type-is@1.6.14~install: type-is@1.6.14
+npm info lifecycle ultron@1.0.2~install: ultron@1.0.2
+npm info lifecycle unpipe@1.0.0~install: unpipe@1.0.0
+npm info lifecycle raw-body@2.2.0~install: raw-body@2.2.0
+npm info lifecycle finalhandler@0.5.1~install: finalhandler@0.5.1
+npm info lifecycle utils-merge@1.0.0~install: utils-merge@1.0.0
+npm info lifecycle vary@1.1.0~install: vary@1.1.0
+npm info lifecycle ws@1.1.2~install: ws@1.1.2
+npm info lifecycle wtf-8@1.0.0~install: wtf-8@1.0.0
+npm info lifecycle engine.io-parser@1.3.2~install: engine.io-parser@1.3.2
+npm info lifecycle engine.io@1.8.3~install: engine.io@1.8.3
+npm info lifecycle xmlhttprequest-ssl@1.5.3~install: xmlhttprequest-ssl@1.5.3
+npm info lifecycle xtend@4.0.1~install: xtend@4.0.1
+npm info lifecycle postgres-interval@1.0.2~install: postgres-interval@1.0.2
+npm info lifecycle pg-types@1.11.0~install: pg-types@1.11.0
+npm info lifecycle yeast@0.1.2~install: yeast@0.1.2
+npm info lifecycle engine.io-client@1.8.3~install: engine.io-client@1.8.3
+npm info lifecycle socket.io-client@1.7.3~install: socket.io-client@1.7.3
+npm info lifecycle async@1.5.2~install: async@1.5.2
+npm info lifecycle body-parser@1.16.1~install: body-parser@1.16.1
+npm info lifecycle cookie-parser@1.4.3~install: cookie-parser@1.4.3
+npm info lifecycle express@4.14.1~install: express@4.14.1
+npm info lifecycle method-override@2.3.7~install: method-override@2.3.7
+npm info lifecycle pg@4.5.6~install: pg@4.5.6
+npm info lifecycle socket.io@1.7.3~install: socket.io@1.7.3
+npm info lifecycle after@0.8.2~postinstall: after@0.8.2
+npm info lifecycle ap@0.2.0~postinstall: ap@0.2.0
+npm info lifecycle array-flatten@1.1.1~postinstall: array-flatten@1.1.1
+npm info lifecycle arraybuffer.slice@0.0.6~postinstall: arraybuffer.slice@0.0.6
+npm info lifecycle backo2@1.0.2~postinstall: backo2@1.0.2
+npm info lifecycle base64-arraybuffer@0.1.5~postinstall: base64-arraybuffer@0.1.5
+npm info lifecycle base64id@1.0.0~postinstall: base64id@1.0.0
+npm info lifecycle blob@0.0.4~postinstall: blob@0.0.4
+npm info lifecycle buffer-writer@1.0.1~postinstall: buffer-writer@1.0.1
+npm info lifecycle bytes@2.4.0~postinstall: bytes@2.4.0
+npm info lifecycle callsite@1.0.0~postinstall: callsite@1.0.0
+npm info lifecycle better-assert@1.0.2~postinstall: better-assert@1.0.2
+npm info lifecycle component-bind@1.0.0~postinstall: component-bind@1.0.0
+npm info lifecycle component-emitter@1.1.2~postinstall: component-emitter@1.1.2
+npm info lifecycle component-inherit@0.0.3~postinstall: component-inherit@0.0.3
+npm info lifecycle content-disposition@0.5.2~postinstall: content-disposition@0.5.2
+npm info lifecycle content-type@1.0.2~postinstall: content-type@1.0.2
+npm info lifecycle cookie@0.3.1~postinstall: cookie@0.3.1
+npm info lifecycle cookie-signature@1.0.6~postinstall: cookie-signature@1.0.6
+npm info lifecycle depd@1.1.0~postinstall: depd@1.1.0
+npm info lifecycle destroy@1.0.4~postinstall: destroy@1.0.4
+npm info lifecycle ee-first@1.1.1~postinstall: ee-first@1.1.1
+npm info lifecycle encodeurl@1.0.1~postinstall: encodeurl@1.0.1
+npm info lifecycle component-emitter@1.2.1~postinstall: component-emitter@1.2.1
+npm info lifecycle escape-html@1.0.3~postinstall: escape-html@1.0.3
+npm info lifecycle etag@1.7.0~postinstall: etag@1.7.0
+npm info lifecycle ms@0.7.1~postinstall: ms@0.7.1
+npm info lifecycle debug@2.2.0~postinstall: debug@2.2.0
+npm info lifecycle qs@6.2.0~postinstall: qs@6.2.0
+npm info lifecycle ms@0.7.1~postinstall: ms@0.7.1
+npm info lifecycle debug@2.2.0~postinstall: debug@2.2.0
+npm info lifecycle forwarded@0.1.0~postinstall: forwarded@0.1.0
+npm info lifecycle fresh@0.3.0~postinstall: fresh@0.3.0
+npm info lifecycle generic-pool@2.4.2~postinstall: generic-pool@2.4.2
+npm info lifecycle has-cors@1.1.0~postinstall: has-cors@1.1.0
+npm info lifecycle iconv-lite@0.4.15~postinstall: iconv-lite@0.4.15
+npm info lifecycle indexof@0.0.1~postinstall: indexof@0.0.1
+npm info lifecycle inherits@2.0.3~postinstall: inherits@2.0.3
+npm info lifecycle ipaddr.js@1.2.0~postinstall: ipaddr.js@1.2.0
+npm info lifecycle isarray@0.0.1~postinstall: isarray@0.0.1
+npm info lifecycle has-binary@0.1.7~postinstall: has-binary@0.1.7
+npm info lifecycle json3@3.3.2~postinstall: json3@3.3.2
+npm info lifecycle media-typer@0.3.0~postinstall: media-typer@0.3.0
+npm info lifecycle merge-descriptors@1.0.1~postinstall: merge-descriptors@1.0.1
+npm info lifecycle methods@1.1.2~postinstall: methods@1.1.2
+npm info lifecycle mime@1.3.4~postinstall: mime@1.3.4
+npm info lifecycle mime-db@1.26.0~postinstall: mime-db@1.26.0
+npm info lifecycle mime-types@2.1.14~postinstall: mime-types@2.1.14
+npm info lifecycle ms@0.7.2~postinstall: ms@0.7.2
+npm info lifecycle debug@2.3.3~postinstall: debug@2.3.3
+npm info lifecycle debug@2.3.3~postinstall: debug@2.3.3
+npm info lifecycle debug@2.3.3~postinstall: debug@2.3.3
+npm info lifecycle debug@2.6.1~postinstall: debug@2.6.1
+npm info lifecycle negotiator@0.6.1~postinstall: negotiator@0.6.1
+npm info lifecycle accepts@1.3.3~postinstall: accepts@1.3.3
+npm info lifecycle object-assign@4.1.0~postinstall: object-assign@4.1.0
+npm info lifecycle object-component@0.0.3~postinstall: object-component@0.0.3
+npm info lifecycle on-finished@2.3.0~postinstall: on-finished@2.3.0
+npm info lifecycle options@0.0.6~postinstall: options@0.0.6
+npm info lifecycle packet-reader@0.2.0~postinstall: packet-reader@0.2.0
+npm info lifecycle parsejson@0.0.3~postinstall: parsejson@0.0.3
+npm info lifecycle parseqs@0.0.5~postinstall: parseqs@0.0.5
+npm info lifecycle parseuri@0.0.5~postinstall: parseuri@0.0.5
+npm info lifecycle parseurl@1.3.1~postinstall: parseurl@1.3.1
+npm info lifecycle path-to-regexp@0.1.7~postinstall: path-to-regexp@0.1.7
+npm info lifecycle pg-connection-string@0.1.3~postinstall: pg-connection-string@0.1.3
+npm info lifecycle postgres-array@1.0.2~postinstall: postgres-array@1.0.2
+npm info lifecycle postgres-bytea@1.0.0~postinstall: postgres-bytea@1.0.0
+npm info lifecycle postgres-date@1.0.3~postinstall: postgres-date@1.0.3
+npm info lifecycle proxy-addr@1.1.3~postinstall: proxy-addr@1.1.3
+npm info lifecycle qs@6.2.1~postinstall: qs@6.2.1
+npm info lifecycle range-parser@1.2.0~postinstall: range-parser@1.2.0
+npm info lifecycle semver@4.3.6~postinstall: semver@4.3.6
+npm info lifecycle ms@0.7.1~postinstall: ms@0.7.1
+npm info lifecycle debug@2.2.0~postinstall: debug@2.2.0
+npm info lifecycle setprototypeof@1.0.2~postinstall: setprototypeof@1.0.2
+npm info lifecycle debug@2.3.3~postinstall: debug@2.3.3
+npm info lifecycle component-emitter@1.2.1~postinstall: component-emitter@1.2.1
+npm info lifecycle debug@2.3.3~postinstall: debug@2.3.3
+npm info lifecycle ms@0.7.1~postinstall: ms@0.7.1
+npm info lifecycle debug@2.2.0~postinstall: debug@2.2.0
+npm info lifecycle socket.io-parser@2.3.1~postinstall: socket.io-parser@2.3.1
+npm info lifecycle socket.io-adapter@0.5.0~postinstall: socket.io-adapter@0.5.0
+npm info lifecycle debug@2.3.3~postinstall: debug@2.3.3
+npm info lifecycle statuses@1.3.1~postinstall: statuses@1.3.1
+npm info lifecycle http-errors@1.5.1~postinstall: http-errors@1.5.1
+npm info lifecycle send@0.14.2~postinstall: send@0.14.2
+npm info lifecycle serve-static@1.11.2~postinstall: serve-static@1.11.2
+npm info lifecycle through@2.3.8~postinstall: through@2.3.8
+npm info lifecycle split@0.3.3~postinstall: split@0.3.3
+npm info lifecycle pgpass@0.0.3~postinstall: pgpass@0.0.3
+npm info lifecycle to-array@0.1.4~postinstall: to-array@0.1.4
+npm info lifecycle type-is@1.6.14~postinstall: type-is@1.6.14
+npm info lifecycle ultron@1.0.2~postinstall: ultron@1.0.2
+npm info lifecycle unpipe@1.0.0~postinstall: unpipe@1.0.0
+npm info lifecycle raw-body@2.2.0~postinstall: raw-body@2.2.0
+npm info lifecycle finalhandler@0.5.1~postinstall: finalhandler@0.5.1
+npm info lifecycle utils-merge@1.0.0~postinstall: utils-merge@1.0.0
+npm info lifecycle vary@1.1.0~postinstall: vary@1.1.0
+npm info lifecycle ws@1.1.2~postinstall: ws@1.1.2
+npm info lifecycle wtf-8@1.0.0~postinstall: wtf-8@1.0.0
+npm info lifecycle engine.io-parser@1.3.2~postinstall: engine.io-parser@1.3.2
+npm info lifecycle engine.io@1.8.3~postinstall: engine.io@1.8.3
+npm info lifecycle xmlhttprequest-ssl@1.5.3~postinstall: xmlhttprequest-ssl@1.5.3
+npm info lifecycle xtend@4.0.1~postinstall: xtend@4.0.1
+npm info lifecycle postgres-interval@1.0.2~postinstall: postgres-interval@1.0.2
+npm info lifecycle pg-types@1.11.0~postinstall: pg-types@1.11.0
+npm info lifecycle yeast@0.1.2~postinstall: yeast@0.1.2
+npm info lifecycle engine.io-client@1.8.3~postinstall: engine.io-client@1.8.3
+npm info lifecycle socket.io-client@1.7.3~postinstall: socket.io-client@1.7.3
+npm info lifecycle async@1.5.2~postinstall: async@1.5.2
+npm info lifecycle body-parser@1.16.1~postinstall: body-parser@1.16.1
+npm info lifecycle cookie-parser@1.4.3~postinstall: cookie-parser@1.4.3
+npm info lifecycle express@4.14.1~postinstall: express@4.14.1
+npm info lifecycle method-override@2.3.7~postinstall: method-override@2.3.7
+npm info lifecycle pg@4.5.6~postinstall: pg@4.5.6
+npm info lifecycle socket.io@1.7.3~postinstall: socket.io@1.7.3
+npm info lifecycle result@1.0.0~preinstall: result@1.0.0
+npm info linkStuff result@1.0.0
+npm info lifecycle result@1.0.0~install: result@1.0.0
+npm info lifecycle result@1.0.0~postinstall: result@1.0.0
+npm info lifecycle result@1.0.0~prepublish: result@1.0.0
+result@1.0.0 /app
++-- async@1.5.2 
++-- body-parser@1.16.1 
+| +-- bytes@2.4.0 
+| +-- content-type@1.0.2 
+| +-- debug@2.6.1 
+| | `-- ms@0.7.2 
+| +-- depd@1.1.0 
+| +-- http-errors@1.5.1 
+| | +-- inherits@2.0.3 
+| | +-- setprototypeof@1.0.2 
+| | `-- statuses@1.3.1 
+| +-- iconv-lite@0.4.15 
+| +-- on-finished@2.3.0 
+| | `-- ee-first@1.1.1 
+| +-- qs@6.2.1 
+| +-- raw-body@2.2.0 
+| | `-- unpipe@1.0.0 
+| `-- type-is@1.6.14 
+|   +-- media-typer@0.3.0 
+|   `-- mime-types@2.1.14 
+|     `-- mime-db@1.26.0 
++-- cookie-parser@1.4.3 
+| +-- cookie@0.3.1 
+| `-- cookie-signature@1.0.6 
++-- express@4.14.1 
+| +-- accepts@1.3.3 
+| | `-- negotiator@0.6.1 
+| +-- array-flatten@1.1.1 
+| +-- content-disposition@0.5.2 
+| +-- debug@2.2.0 
+| | `-- ms@0.7.1 
+| +-- encodeurl@1.0.1 
+| +-- escape-html@1.0.3 
+| +-- etag@1.7.0 
+| +-- finalhandler@0.5.1 
+| | `-- debug@2.2.0 
+| |   `-- ms@0.7.1 
+| +-- fresh@0.3.0 
+| +-- merge-descriptors@1.0.1 
+| +-- methods@1.1.2 
+| +-- parseurl@1.3.1 
+| +-- path-to-regexp@0.1.7 
+| +-- proxy-addr@1.1.3 
+| | +-- forwarded@0.1.0 
+| | `-- ipaddr.js@1.2.0 
+| +-- qs@6.2.0 
+| +-- range-parser@1.2.0 
+| +-- send@0.14.2 
+| | +-- debug@2.2.0 
+| | | `-- ms@0.7.1 
+| | +-- destroy@1.0.4 
+| | `-- mime@1.3.4 
+| +-- serve-static@1.11.2 
+| +-- utils-merge@1.0.0 
+| `-- vary@1.1.0 
++-- method-override@2.3.7 
+| `-- debug@2.3.3 
++-- pg@4.5.6 
+| +-- buffer-writer@1.0.1 
+| +-- generic-pool@2.4.2 
+| +-- packet-reader@0.2.0 
+| +-- pg-connection-string@0.1.3 
+| +-- pg-types@1.11.0 
+| | +-- ap@0.2.0 
+| | +-- postgres-array@1.0.2 
+| | +-- postgres-bytea@1.0.0 
+| | +-- postgres-date@1.0.3 
+| | `-- postgres-interval@1.0.2 
+| |   `-- xtend@4.0.1 
+| +-- pgpass@0.0.3 
+| | `-- split@0.3.3 
+| |   `-- through@2.3.8 
+| `-- semver@4.3.6 
+`-- socket.io@1.7.3 
+  +-- debug@2.3.3 
+  +-- engine.io@1.8.3 
+  | +-- base64id@1.0.0 
+  | +-- debug@2.3.3 
+  | +-- engine.io-parser@1.3.2 
+  | | +-- after@0.8.2 
+  | | +-- arraybuffer.slice@0.0.6 
+  | | +-- base64-arraybuffer@0.1.5 
+  | | +-- blob@0.0.4 
+  | | `-- wtf-8@1.0.0 
+  | `-- ws@1.1.2 
+  |   +-- options@0.0.6 
+  |   `-- ultron@1.0.2 
+  +-- has-binary@0.1.7 
+  | `-- isarray@0.0.1 
+  +-- object-assign@4.1.0 
+  +-- socket.io-adapter@0.5.0 
+  | `-- debug@2.3.3 
+  +-- socket.io-client@1.7.3 
+  | +-- backo2@1.0.2 
+  | +-- component-bind@1.0.0 
+  | +-- component-emitter@1.2.1 
+  | +-- debug@2.3.3 
+  | +-- engine.io-client@1.8.3 
+  | | +-- component-emitter@1.2.1 
+  | | +-- component-inherit@0.0.3 
+  | | +-- debug@2.3.3 
+  | | +-- has-cors@1.1.0 
+  | | +-- parsejson@0.0.3 
+  | | +-- parseqs@0.0.5 
+  | | +-- xmlhttprequest-ssl@1.5.3 
+  | | `-- yeast@0.1.2 
+  | +-- indexof@0.0.1 
+  | +-- object-component@0.0.3 
+  | +-- parseuri@0.0.5 
+  | | `-- better-assert@1.0.2 
+  | |   `-- callsite@1.0.0 
+  | `-- to-array@0.1.4 
+  `-- socket.io-parser@2.3.1 
+    +-- component-emitter@1.1.2 
+    +-- debug@2.2.0 
+    | `-- ms@0.7.1 
+    `-- json3@3.3.2 
+
+npm WARN result@1.0.0 No description
+npm WARN result@1.0.0 No repository field.
+npm info ok 
+npm info it worked if it ends with ok
+npm info using npm@3.8.6
+npm info using node@v5.11.0
+result@1.0.0 /app
++-- async@1.5.2
++-- body-parser@1.16.1
+| +-- bytes@2.4.0
+| +-- content-type@1.0.2
+| +-- debug@2.6.1
+| | `-- ms@0.7.2
+| +-- depd@1.1.0
+| +-- http-errors@1.5.1
+| | +-- inherits@2.0.3
+| | +-- setprototypeof@1.0.2
+| | `-- statuses@1.3.1
+| +-- iconv-lite@0.4.15
+| +-- on-finished@2.3.0
+| | `-- ee-first@1.1.1
+| +-- qs@6.2.1
+| +-- raw-body@2.2.0
+| | `-- unpipe@1.0.0
+| `-- type-is@1.6.14
+|   +-- media-typer@0.3.0
+|   `-- mime-types@2.1.14
+|     `-- mime-db@1.26.0
++-- cookie-parser@1.4.3
+| +-- cookie@0.3.1
+| `-- cookie-signature@1.0.6
++-- express@4.14.1
+| +-- accepts@1.3.3
+| | `-- negotiator@0.6.1
+| +-- array-flatten@1.1.1
+| +-- content-disposition@0.5.2
+| +-- debug@2.2.0
+| | `-- ms@0.7.1
+| +-- encodeurl@1.0.1
+| +-- escape-html@1.0.3
+| +-- etag@1.7.0
+| +-- finalhandler@0.5.1
+| | `-- debug@2.2.0
+| |   `-- ms@0.7.1
+| +-- fresh@0.3.0
+| +-- merge-descriptors@1.0.1
+| +-- methods@1.1.2
+| +-- parseurl@1.3.1
+| +-- path-to-regexp@0.1.7
+| +-- proxy-addr@1.1.3
+| | +-- forwarded@0.1.0
+| | `-- ipaddr.js@1.2.0
+| +-- qs@6.2.0
+| +-- range-parser@1.2.0
+| +-- send@0.14.2
+| | +-- debug@2.2.0
+| | | `-- ms@0.7.1
+| | +-- destroy@1.0.4
+| | `-- mime@1.3.4
+| +-- serve-static@1.11.2
+| +-- utils-merge@1.0.0
+| `-- vary@1.1.0
++-- method-override@2.3.7
+| `-- debug@2.3.3
++-- pg@4.5.6
+| +-- buffer-writer@1.0.1
+| +-- generic-pool@2.4.2
+| +-- packet-reader@0.2.0
+| +-- pg-connection-string@0.1.3
+| +-- pg-types@1.11.0
+| | +-- ap@0.2.0
+| | +-- postgres-array@1.0.2
+| | +-- postgres-bytea@1.0.0
+| | +-- postgres-date@1.0.3
+| | `-- postgres-interval@1.0.2
+| |   `-- xtend@4.0.1
+| +-- pgpass@0.0.3
+| | `-- split@0.3.3
+| |   `-- through@2.3.8
+| `-- semver@4.3.6
+`-- socket.io@1.7.3
+  +-- debug@2.3.3
+  +-- engine.io@1.8.3
+  | +-- base64id@1.0.0
+  | +-- debug@2.3.3
+  | +-- engine.io-parser@1.3.2
+  | | +-- after@0.8.2
+  | | +-- arraybuffer.slice@0.0.6
+  | | +-- base64-arraybuffer@0.1.5
+  | | +-- blob@0.0.4
+  | | `-- wtf-8@1.0.0
+  | `-- ws@1.1.2
+  |   +-- options@0.0.6
+  |   `-- ultron@1.0.2
+  +-- has-binary@0.1.7
+  | `-- isarray@0.0.1
+  +-- object-assign@4.1.0
+  +-- socket.io-adapter@0.5.0
+  | `-- debug@2.3.3
+  +-- socket.io-client@1.7.3
+  | +-- backo2@1.0.2
+  | +-- component-bind@1.0.0
+  | +-- component-emitter@1.2.1
+  | +-- debug@2.3.3
+  | +-- engine.io-client@1.8.3
+  | | +-- component-emitter@1.2.1
+  | | +-- component-inherit@0.0.3
+  | | +-- debug@2.3.3
+  | | +-- has-cors@1.1.0
+  | | +-- parsejson@0.0.3
+  | | +-- parseqs@0.0.5
+  | | +-- xmlhttprequest-ssl@1.5.3
+  | | `-- yeast@0.1.2
+  | +-- indexof@0.0.1
+  | +-- object-component@0.0.3
+  | +-- parseuri@0.0.5
+  | | `-- better-assert@1.0.2
+  | |   `-- callsite@1.0.0
+  | `-- to-array@0.1.4
+  `-- socket.io-parser@2.3.1
+    +-- component-emitter@1.1.2
+    +-- debug@2.2.0
+    | `-- ms@0.7.1
+    `-- json3@3.3.2
+
+npm info ok 
+ ---> d83671354be0
+Removing intermediate container 40bea459d7f1
+Step 7/11 : RUN mv /app/node_modules /node_modules
+ ---> Running in 24fbd97d8221
+ ---> a105377056f8
+Removing intermediate container 24fbd97d8221
+Step 8/11 : ADD . /app
+ ---> f1c173b64c90
+Removing intermediate container 4b4b10ffae59
+Step 9/11 : ENV PORT 80
+ ---> Running in 2bf334aeb472
+ ---> 6b024d7e76f0
+Removing intermediate container 2bf334aeb472
+Step 10/11 : EXPOSE 80
+ ---> Running in cea0827767ff
+ ---> a186fd6f33dd
+Removing intermediate container cea0827767ff
+Step 11/11 : CMD node server.js
+ ---> Running in db8d73c0e8f4
+ ---> da05ce68daca
+Removing intermediate container db8d73c0e8f4
+Successfully built da05ce68daca
+WARNING: Image for service result was built because it did not already exist. To rebuild this image you must use `docker-compose build` or `docker-compose up --build`.
+Creating examplevotingapp_result_1
+Creating examplevotingapp_worker_1
+Creating examplevotingapp_vote_1
+Creating redis
+Creating db
+Attaching to db, redis, examplevotingapp_result_1, examplevotingapp_worker_1, examplevotingapp_vote_1
+db        | The files belonging to this database system will be owned by user "postgres".
+db        | This user must also own the server process.
+db        | 
+db        | The database cluster will be initialized with locale "en_US.utf8".
+db        | The default database encoding has accordingly been set to "UTF8".
+db        | The default text search configuration will be set to "english".
+db        | 
+db        | Data page checksums are disabled.
+db        | 
+db        | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+db        | creating subdirectories ... ok
+db        | selecting default max_connections ... 100
+redis     | 1:C 01 Mar 15:48:53.286 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+redis     |                 _._                                                  
+redis     |            _.-``__ ''-._                                             
+redis     |       _.-``    `.  `_.  ''-._           Redis 3.2.8 (00000000/0) 64 bit
+redis     |   .-`` .-```.  ```\/    _.,_ ''-._                                   
+result_1  | [nodemon] 1.11.0
+redis     |  (    '      ,       .-`  | `,    )     Running in standalone mode
+db        | selecting default shared_buffers ... 128MB
+db        | selecting dynamic shared memory implementation ... posix
+worker_1  | Waiting for db
+redis     |  |`-._`-...-` __...-.``-._|'` _.-'|     Port: 6379
+result_1  | [nodemon] to restart at any time, enter `rs`
+db        | creating configuration files ... ok
+redis     |  |    `-._   `._    /     _.-'    |     PID: 1
+redis     |   `-._    `-._  `-./  _.-'    _.-'                                   
+redis     |  |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+redis     |  |    `-._`-._        _.-'_.-'    |           http://redis.io        
+redis     |   `-._    `-._`-.__.-'_.-'    _.-'                                   
+redis     |  |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+redis     |  |    `-._`-._        _.-'_.-'    |                                  
+redis     |   `-._    `-._`-.__.-'_.-'    _.-'                                   
+redis     |       `-._    `-.__.-'    _.-'                                       
+redis     |           `-._        _.-'                                           
+redis     |               `-.__.-'                                               
+redis     | 
+result_1  | [nodemon] watching: *.*
+db        | creating template1 database in /var/lib/postgresql/data/base/1 ... ok
+redis     | 1:M 01 Mar 15:48:53.288 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+redis     | 1:M 01 Mar 15:48:53.288 # Server started, Redis version 3.2.8
+redis     | 1:M 01 Mar 15:48:53.288 # WARNING you have Transparent Huge Pages (THP) support enabled in your kernel. This will create latency and memory usage issues with Redis. To fix this issue run the command 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' as root, and add it to your /etc/rc.local in order to retain the setting after a reboot. Redis must be restarted after THP is disabled.
+redis     | 1:M 01 Mar 15:48:53.288 * The server is now ready to accept connections on port 6379
+result_1  | [nodemon] starting `node --debug server.js`
+result_1  | Debugger listening on port 5858
+db        | initializing pg_authid ... ok
+db        | initializing dependencies ... ok
+db        | creating system views ... ok
+db        | loading system objects' descriptions ... ok
+db        | creating collations ... ok
+db        | creating conversions ... ok
+result_1  | Wed, 01 Mar 2017 15:48:54 GMT body-parser deprecated bodyParser: use individual json/urlencoded middlewares at server.js:67:9
+result_1  | Wed, 01 Mar 2017 15:48:54 GMT body-parser deprecated undefined extended: provide extended option at ../node_modules/body-parser/index.js:105:29
+result_1  | App running on port 80
+db        | creating dictionaries ... ok
+result_1  | Waiting for db
+db        | setting privileges on built-in objects ... ok
+db        | creating information schema ... ok
+db        | loading PL/pgSQL server-side language ... ok
+vote_1    |  * Running on http://0.0.0.0:80/ (Press CTRL+C to quit)
+vote_1    |  * Restarting with stat
+db        | vacuuming database template1 ... ok
+db        | copying template1 to template0 ... ok
+db        | copying template1 to postgres ... ok
+vote_1    |  * Debugger is active!
+vote_1    |  * Debugger pin code: 117-298-445
+result_1  | Waiting for db
+worker_1  | Waiting for db
+db        | syncing data to disk ... 
+db        | WARNING: enabling "trust" authentication for local connections
+db        | You can change this by editing pg_hba.conf or using the option -A, or
+db        | --auth-local and --auth-host, the next time you run initdb.
+db        | ok
+db        | 
+db        | Success. You can now start the database server using:
+db        | 
+db        |     postgres -D /var/lib/postgresql/data
+db        | or
+db        |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+db        | 
+db        | ****************************************************
+db        | WARNING: No password has been set for the database.
+db        |          This will allow anyone with access to the
+db        |          Postgres port to access your database. In
+db        |          Docker's default configuration, this is
+db        |          effectively any other container on the same
+db        |          system.
+db        | 
+db        |          Use "-e POSTGRES_PASSWORD=password" to set
+db        |          it in "docker run".
+db        | ****************************************************
+db        | waiting for server to start....LOG:  database system was shut down at 2017-03-01 15:48:55 UTC
+db        | LOG:  MultiXact member wraparound protections are now enabled
+db        | LOG:  database system is ready to accept connections
+db        | LOG:  autovacuum launcher started
+result_1  | Waiting for db
+worker_1  | Waiting for db
+db        |  done
+db        | server started
+db        | ALTER ROLE
+db        | 
+db        | 
+db        | /usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
+db        | 
+db        | LOG:  received fast shutdown request
+db        | LOG:  aborting any active transactions
+db        | waiting for server to shut down....LOG:  autovacuum launcher shutting down
+db        | LOG:  shutting down
+db        | LOG:  database system is shut down
+result_1  | Waiting for db
+worker_1  | Waiting for db
+db        |  done
+db        | server stopped
+db        | 
+db        | PostgreSQL init process complete; ready for start up.
+db        | 
+db        | LOG:  database system was shut down at 2017-03-01 15:48:56 UTC
+db        | LOG:  MultiXact member wraparound protections are now enabled
+db        | LOG:  database system is ready to accept connections
+db        | LOG:  autovacuum launcher started
+result_1  | Connected to db
+db        | ERROR:  relation "votes" does not exist at character 38
+db        | STATEMENT:  SELECT vote, COUNT(id) AS count FROM votes GROUP BY vote
+result_1  | Error performing query: error: relation "votes" does not exist
+worker_1  | Connected to db
+worker_1  | Found redis at 172.19.0.4
+worker_1  | Connecting to redis

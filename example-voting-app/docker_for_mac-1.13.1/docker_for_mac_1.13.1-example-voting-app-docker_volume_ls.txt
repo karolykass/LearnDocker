@@ -1,0 +1,4 @@
+$ docker volume ls
+DRIVER              VOLUME NAME
+local               e0422f8700818f12d4eb1bf85a82522696c4c51f1eda6213b95ab8fb82722321
+local               examplevotingapp_db-data
